@@ -1,0 +1,150 @@
+import { z } from 'zod'
+
+export const COLUMN_IDS = ['backlog', 'doing', 'review', 'done'] as const
+export const DONE_COLUMN_ID = 'done'
+export const MAX_TITLE_LENGTH = 120
+export const MAX_TASKS_ON_BOARD = 200
+export const ARCHIVE_AFTER_MS = 24 * 60 * 60 * 1000
+export const ARCHIVE_PAGE_SIZE = 25
+
+const MAX_ID_LENGTH = 64
+const TASK_ID_BYTES = 16
+const MAX_TASK_INDEX = MAX_TASKS_ON_BOARD
+const MAX_ARCHIVE_PAGE = 1_000_000
+
+const columnIdSchema = z.enum(COLUMN_IDS)
+const timestampSchema = z.number().int().positive()
+// Task and column ids share one namespace in dnd-kit, so they must not overlap.
+export const taskIdSchema = z
+  .string()
+  .min(1)
+  .max(MAX_ID_LENGTH)
+  .regex(/^[A-Za-z0-9-]+$/)
+  .refine((id) => !COLUMN_IDS.some((columnId) => columnId === id))
+
+/** Uses getRandomValues because randomUUID is missing on plain HTTP origins. */
+export function createTaskId(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(TASK_ID_BYTES))
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join(
+    '',
+  )
+}
+
+export const taskTitleSchema = z.string().trim().min(1).max(MAX_TITLE_LENGTH)
+export const archivePageSchema = z.number().int().min(1).max(MAX_ARCHIVE_PAGE)
+
+/**
+ * Commands are the only way a board changes. The client replays pending ones
+ * over its cached board and the server applies them for real, so both sides
+ * share one reducer. Each command is idempotent: replaying it is harmless.
+ *
+ * `at` lets the client show a time immediately. The server always replaces it
+ * with its own clock, so stored timestamps never come from the browser.
+ */
+export const boardCommandSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('move'),
+    taskId: taskIdSchema,
+    toColumnId: columnIdSchema,
+    toIndex: z.number().int().min(0).max(MAX_TASK_INDEX),
+    at: timestampSchema,
+  }),
+  z.object({
+    type: z.literal('create'),
+    taskId: taskIdSchema,
+    columnId: columnIdSchema,
+    title: taskTitleSchema,
+    at: timestampSchema,
+  }),
+  z.object({
+    type: z.literal('delete'),
+    taskId: taskIdSchema,
+  }),
+  z.object({
+    type: z.literal('archive'),
+    taskId: taskIdSchema,
+  }),
+])
+
+export type ColumnId = z.infer<typeof columnIdSchema>
+export type BoardCommand = z.infer<typeof boardCommandSchema>
+export type ArchiveReason = 'confirmed' | 'expired'
+
+export interface Task {
+  readonly id: string
+  readonly title: string
+  readonly createdAt: number
+  /** When it landed in its current column. Equals createdAt until it moves. */
+  readonly movedAt: number
+  readonly doneAt: number | null
+}
+
+export interface TaskMove {
+  readonly columnId: ColumnId
+  readonly at: number
+}
+
+export interface Column {
+  readonly id: ColumnId
+  readonly title: string
+  readonly tasks: readonly Task[]
+}
+
+export interface Board {
+  readonly columns: readonly Column[]
+}
+
+export interface ArchivedTask {
+  readonly id: string
+  readonly title: string
+  readonly createdAt: number
+  readonly doneAt: number
+  readonly archivedAt: number
+  readonly reason: ArchiveReason
+  /** Every column it landed in, oldest first. */
+  readonly moves: readonly TaskMove[]
+}
+
+export interface ArchivePage {
+  readonly tasks: readonly ArchivedTask[]
+  readonly page: number
+  readonly pageCount: number
+  readonly total: number
+}
+
+export const COLUMN_TITLES: Readonly<Record<ColumnId, string>> = {
+  backlog: 'Backlog',
+  doing: 'In progress',
+  review: 'In review',
+  done: 'Done',
+}
+
+const SEED_TASKS: Readonly<Record<ColumnId, readonly (readonly [string, string])[]>> = {
+  backlog: [
+    ['seed-a1f3', 'Draft the onboarding checklist'],
+    ['seed-7c20', 'Audit colour contrast on forms'],
+    ['seed-e94b', 'Collect feedback from the beta group'],
+  ],
+  doing: [
+    ['seed-3d6a', 'Rebuild the invoice export'],
+    ['seed-b508', 'Write release notes for 2.4'],
+  ],
+  review: [['seed-40ce', 'Migrate search to the new index']],
+  done: [],
+}
+
+export function createSeedBoard(createdAt: number): Board {
+  return {
+    columns: COLUMN_IDS.map((id) => ({
+      id,
+      title: COLUMN_TITLES[id],
+      tasks: SEED_TASKS[id].map(([taskId, title]) => ({
+        id: taskId,
+        title,
+        createdAt,
+        movedAt: createdAt,
+        doneAt: null,
+      })),
+    })),
+  }
+}

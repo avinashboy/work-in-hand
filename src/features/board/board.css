@@ -1,0 +1,1132 @@
+@import '@fontsource-variable/fraunces/index.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+
+:root {
+  color-scheme: light;
+
+  --paper: #efe7d8;
+  --paper-deep: #e4dac6;
+  --card: #fffcf4;
+  --ink: #1d1a16;
+  --ink-soft: #5f584b;
+  --rule: #1d1a1633;
+  --vermilion: #bf3a1b;
+  --ochre: #8f6108;
+  --forest: #2b6345;
+  --slate: #5a5548;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 .11 0 0 0 0 .1 0 0 0 0 .08 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E");
+
+  --font-display: 'Fraunces Variable', Georgia, serif;
+  --font-mono: 'IBM Plex Mono', Consolas, monospace;
+
+  --shadow-card: 1px 2px 0 #1d1a1626;
+  --shadow-card-hover: 3px 5px 0 #1d1a1633;
+  --shadow-lifted: 10px 18px 28px #1d1a1647;
+  --ease-settle: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 140ms;
+}
+
+/* The press room after dark: warm black stock, cream ink, brighter spot colours. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --paper: #171411;
+  --paper-deep: #211d18;
+  --card: #2d2821;
+  --ink: #f0e8d9;
+  --ink-soft: #b5ab9a;
+  --rule: #f0e8d92e;
+  --vermilion: #f27e5e;
+  --ochre: #dfae4f;
+  --forest: #74c398;
+  --slate: #a69f8f;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 .94 0 0 0 0 .91 0 0 0 0 .85 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E");
+
+  --shadow-card: 1px 2px 0 #00000080;
+  --shadow-card-hover: 3px 5px 0 #0000009e;
+  --shadow-lifted: 10px 18px 28px #000000a6;
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  background-color: var(--paper);
+  background-image: var(--grain);
+  font-family: var(--font-display);
+}
+
+.board-page {
+  min-height: 100dvh;
+  box-sizing: border-box;
+  padding: clamp(1.25rem, 3vw, 3rem) clamp(1rem, 3vw, 3rem) 5rem;
+}
+
+/* Masthead */
+
+.masthead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem 3rem;
+  padding-bottom: 1rem;
+  border-bottom: 5px double var(--ink);
+}
+
+.masthead h1 {
+  margin: 0;
+  font-size: clamp(2.75rem, 1rem + 7vw, 6.5rem);
+  font-weight: 340;
+  font-variation-settings: 'opsz' 144, 'SOFT' 40;
+  line-height: 0.92;
+  letter-spacing: -0.035em;
+}
+
+.masthead-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.tally {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.tally strong {
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+.tally-state {
+  margin-left: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.outage-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--ink);
+  color: var(--ink);
+  text-decoration: none;
+  transition: background-color var(--duration-fast), color var(--duration-fast);
+}
+
+.outage-toggle:hover {
+  background: var(--ink);
+  color: var(--card);
+}
+
+.outage-toggle[data-active='true'] {
+  border-color: var(--vermilion);
+  background: var(--vermilion);
+  color: var(--card);
+}
+
+.outage-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.theme-switch {
+  display: inline-flex;
+  border: 1px solid var(--ink);
+}
+
+.theme-option {
+  padding: 0.3rem 0.7rem;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  transition: background-color var(--duration-fast), color var(--duration-fast);
+}
+
+.theme-option:hover {
+  background: var(--rule);
+}
+
+/* Keyed to the page, not React state, so it's right before hydration too. */
+:root[data-theme='light'] .theme-option[data-option='light'],
+:root[data-theme='dark'] .theme-option[data-option='dark'] {
+  background: var(--ink);
+  color: var(--card);
+}
+
+/* Columns */
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(16.5rem, 1fr));
+  gap: clamp(0.75rem, 1.5vw, 1.5rem);
+  align-items: stretch;
+  margin-top: 1.75rem;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding-bottom: 0.75rem;
+}
+
+/* Snapping would pull the strip away from where a drag has scrolled it. */
+.columns[data-dragging='true'] {
+  scroll-snap-type: none;
+}
+
+.column {
+  --accent: var(--slate);
+  display: flex;
+  flex-direction: column;
+  min-height: 62dvh;
+  scroll-snap-align: start;
+  border-top: 6px solid var(--accent);
+  background: var(--paper-deep);
+}
+
+.column[data-column='doing'] {
+  --accent: var(--vermilion);
+}
+
+.column[data-column='review'] {
+  --accent: var(--ochre);
+}
+
+.column[data-column='done'] {
+  --accent: var(--forest);
+}
+
+.column-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0.8rem 0.9rem 0.6rem;
+}
+
+.column-head h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 500;
+  font-style: italic;
+  font-variation-settings: 'opsz' 40;
+}
+
+.column-count {
+  color: var(--accent);
+  font-size: 2.1rem;
+  font-weight: 300;
+  line-height: 1;
+  font-variant-numeric: lining-nums;
+}
+
+.task-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.25rem 0.75rem 0.9rem;
+  list-style: none;
+}
+
+.task-empty {
+  padding: 1.5rem 0.5rem;
+  border: 1px dashed var(--rule);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+/* Cards */
+
+.task {
+  position: relative;
+  background: var(--card);
+  box-shadow: var(--shadow-card);
+  transition: box-shadow var(--duration-fast) var(--ease-settle);
+}
+
+.task:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+
+.task::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--ink) 0 3px,
+    transparent 3px 6px
+  );
+  content: '';
+  opacity: 0;
+}
+
+.task[data-saving='true']::before {
+  animation: saving-pulse 900ms ease-in-out infinite alternate;
+}
+
+.task[data-dragging='true'] {
+  opacity: 0.35;
+  outline: 1px dashed var(--ink);
+  box-shadow: none;
+}
+
+.task-grab {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  width: 100%;
+  padding: 0.7rem 2rem 0.3rem 0.85rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: grab;
+  user-select: none;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+}
+
+.task-times {
+  padding: 0 2rem 0.8rem 0.85rem;
+  cursor: grab;
+  user-select: none;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+}
+
+.task-code {
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+}
+
+.task-saving {
+  color: var(--vermilion);
+}
+
+.task-title {
+  font-size: 1.05rem;
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+}
+
+.task-delete {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.3rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--duration-fast), color var(--duration-fast);
+}
+
+.task:hover .task-delete,
+.task-delete:focus-visible {
+  opacity: 1;
+}
+
+.task-delete:hover {
+  color: var(--vermilion);
+}
+
+@media (hover: none) {
+  .task-delete {
+    opacity: 1;
+  }
+}
+
+.task-overlay-card {
+  box-shadow: var(--shadow-lifted);
+  transform: rotate(-2.2deg);
+  cursor: grabbing;
+}
+
+.task-overlay .task-code,
+.task-overlay .task-title {
+  display: block;
+}
+
+.task-overlay .task-code {
+  padding: 0.7rem 2rem 0.3rem 0.85rem;
+}
+
+.task-overlay .task-title {
+  padding: 0 2rem 0.3rem 0.85rem;
+}
+
+/* The card under the pointer mid-drag shouldn't flash its exact time. */
+.task-overlay .time-tip {
+  display: none;
+}
+
+/* Add a card */
+
+.add-task {
+  display: flex;
+  border-top: 1px solid var(--rule);
+}
+
+.add-task input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.7rem 0.9rem;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.add-task input::placeholder {
+  color: var(--ink-soft);
+}
+
+.add-task button {
+  width: 2.75rem;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: background-color var(--duration-fast), color var(--duration-fast);
+}
+
+.add-task button:hover {
+  background: var(--ink);
+  color: var(--card);
+}
+
+:is(.task-grab, .task-delete, .add-task input, .add-task button, .outage-toggle, .notice button):focus-visible {
+  outline: 2px solid var(--vermilion);
+  outline-offset: -2px;
+}
+
+/* Failed-save notice */
+
+.notice-region {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  left: 1rem;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.75rem 1rem;
+  background: var(--ink);
+  color: var(--card);
+  box-shadow: var(--shadow-lifted);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  pointer-events: auto;
+  animation: notice-rise 260ms var(--ease-settle);
+}
+
+.notice button {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Card timestamps and the archive button */
+
+.task-meta {
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  line-height: 1.5;
+}
+
+.task-time {
+  position: relative;
+  display: block;
+}
+
+.task-time + .task-time {
+  margin-top: 0.15rem;
+}
+
+.time-trigger {
+  /* A bigger touch target that doesn't push the lines apart. */
+  margin-block: -0.3rem;
+  padding: 0.3rem 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+  text-decoration: underline dotted var(--ink-soft);
+  text-underline-offset: 2px;
+  cursor: help;
+  touch-action: manipulation;
+}
+
+.relative-time {
+  white-space: nowrap;
+}
+
+/* Anchored to the line, not the words, so it always fits inside the card. */
+.time-tip {
+  position: absolute;
+  bottom: calc(100% + 0.3rem);
+  left: 0;
+  z-index: 5;
+  padding: 0.2rem 0.45rem;
+  background: var(--ink);
+  color: var(--card);
+  white-space: nowrap;
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(3px);
+  transition:
+    opacity var(--duration-fast),
+    transform var(--duration-fast) var(--ease-settle),
+    visibility var(--duration-fast);
+}
+
+.task-time[data-open='true'] .time-tip,
+.time-trigger:focus-visible + .time-tip {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+}
+
+/* Touch screens would leave a hover stuck on, so they use the tap instead. */
+@media (hover: hover) {
+  .time-trigger:hover {
+    text-decoration-color: var(--vermilion);
+  }
+
+  .time-trigger:hover + .time-tip {
+    visibility: visible;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.relative-time[data-pending='true'] {
+  visibility: hidden;
+}
+
+.task-finish {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.5rem 0.55rem 0.85rem;
+  border-top: 1px solid var(--rule);
+}
+
+.task-archive {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 1px solid var(--forest);
+  background: none;
+  color: var(--forest);
+  cursor: pointer;
+  transition: background-color var(--duration-fast), color var(--duration-fast);
+}
+
+.task-archive:hover {
+  background: var(--forest);
+  color: var(--card);
+}
+
+.task-archive:focus-visible,
+.history-delete:focus-visible,
+.history-confirm button:focus-visible,
+.not-found-home:focus-visible,
+.theme-option:focus-visible,
+.history-link:focus-visible,
+.history-toggle:focus-visible,
+.time-trigger:focus-visible,
+.history-pager a:focus-visible {
+  outline: 2px solid var(--vermilion);
+  outline-offset: 2px;
+}
+
+.history-link {
+  color: var(--ink);
+  font-weight: 500;
+  text-underline-offset: 3px;
+}
+
+.history-link:hover {
+  color: var(--vermilion);
+}
+
+/* History ledger */
+
+.history-empty {
+  max-width: 34rem;
+  margin: 3rem 0;
+  color: var(--ink-soft);
+  font-size: 1.25rem;
+  font-style: italic;
+}
+
+.history-table {
+  width: 100%;
+  margin-top: 1.25rem;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+.history-table thead th {
+  padding: 0.6rem 1rem 0.6rem 0;
+  border-bottom: 1px solid var(--ink);
+  color: var(--ink-soft);
+  font-weight: 400;
+  text-align: left;
+}
+
+.history-table tbody th {
+  padding-right: 1.5rem;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 400;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.history-table tbody th,
+.history-table td {
+  padding-block: 0.8rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.history-table td {
+  padding-right: 1rem;
+  white-space: nowrap;
+}
+
+/* Deleting from the ledger */
+
+.history-error {
+  margin: 1rem 0 0;
+  color: var(--vermilion);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.history-table td.history-actions {
+  position: relative;
+  width: 1%;
+  padding-right: 0;
+  cursor: default;
+}
+
+/* Holds the row's height once the button is swapped for the floating confirm. */
+.history-table td.history-actions::before {
+  display: inline-block;
+  height: 2rem;
+  vertical-align: middle;
+  content: '';
+}
+
+.history-delete {
+  display: inline-grid;
+  vertical-align: middle;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: color var(--duration-fast);
+}
+
+.history-delete:hover {
+  color: var(--vermilion);
+}
+
+/* Floats over the row, so the columns don't jump when it appears. */
+.history-confirm {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  gap: 0.4rem;
+  padding-left: 0.75rem;
+  background: var(--paper);
+  transform: translateY(-50%);
+}
+
+.history-confirm button {
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--ink);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  transition: background-color var(--duration-fast), color var(--duration-fast);
+}
+
+.history-confirm .history-confirm-delete {
+  border-color: var(--vermilion);
+  background: var(--vermilion);
+  color: var(--card);
+}
+
+.history-confirm-keep:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.history-confirm button:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+/* A card's journey: one ruled line, stamped in each column's spot colour. */
+
+.history-row {
+  cursor: pointer;
+}
+
+.history-toggle {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--duration-fast);
+}
+
+.history-toggle::before {
+  flex: none;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.7em;
+  content: '▸';
+  transition: transform var(--duration-fast) var(--ease-settle);
+}
+
+.history-row:hover .history-toggle {
+  color: var(--vermilion);
+}
+
+.history-row[data-open='true'] .history-toggle::before {
+  transform: rotate(90deg);
+}
+
+.history-row[data-open='true'] th,
+.history-row[data-open='true'] td {
+  border-bottom-color: transparent;
+}
+
+.history-table .history-detail td {
+  padding: 0 0 1.25rem;
+  white-space: normal;
+}
+
+.timeline {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  border-left: 6px solid var(--ink);
+  background: var(--paper-deep);
+  list-style: none;
+  animation: timeline-open 220ms var(--ease-settle);
+}
+
+.timeline-step {
+  --step: var(--slate);
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0 0 1.05rem 1.5rem;
+}
+
+.timeline-step:last-child {
+  padding-bottom: 0;
+}
+
+.timeline-step[data-tone='doing'] {
+  --step: var(--vermilion);
+}
+
+.timeline-step[data-tone='review'] {
+  --step: var(--ochre);
+}
+
+.timeline-step[data-tone='done'] {
+  --step: var(--forest);
+}
+
+.timeline-step[data-tone='history'] {
+  --step: var(--ink);
+}
+
+/* The stamp on each stage, and the rule running down to the next one. */
+.timeline-step::before {
+  position: absolute;
+  top: 0.32rem;
+  left: 0;
+  width: 0.62rem;
+  height: 0.62rem;
+  background: var(--step);
+  content: '';
+}
+
+.timeline-step:not(:last-child)::after {
+  position: absolute;
+  top: 1.05rem;
+  bottom: -0.2rem;
+  left: calc(0.31rem - 0.5px);
+  width: 1px;
+  background: var(--rule);
+  content: '';
+}
+
+.timeline-label {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  line-height: 1.3;
+}
+
+.timeline-time {
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+}
+
+.timeline-note {
+  margin: 0;
+  padding: 0 1.25rem 1rem;
+  border-left: 6px solid var(--ink);
+  background: var(--paper-deep);
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  font-style: italic;
+}
+
+@keyframes timeline-open {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.history-pager {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  margin-top: 1.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.history-pager a {
+  color: var(--ink);
+}
+
+.history-pager a:last-child {
+  text-align: right;
+}
+
+@media (max-width: 760px) {
+  .history-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .history-table tr {
+    display: block;
+    padding: 0.9rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .history-table tbody th,
+  .history-table td {
+    display: block;
+    padding: 0.1rem 0;
+    border: 0;
+    white-space: normal;
+  }
+
+  .history-table td::before {
+    display: inline-block;
+    width: 6.5rem;
+    color: var(--ink-soft);
+    content: attr(data-label);
+  }
+
+  .history-table .history-detail {
+    padding: 0;
+  }
+
+  .history-table .history-detail td {
+    padding: 0 0 0.9rem;
+  }
+
+  .history-table .history-detail td::before,
+  .history-table td.history-actions::before {
+    content: none;
+  }
+
+  .history-table td.history-actions {
+    width: auto;
+    margin-top: 0.3rem;
+  }
+
+  .history-confirm {
+    position: static;
+    padding-left: 0;
+    background: none;
+    transform: none;
+  }
+
+  .history-row[data-open='true'] {
+    border-bottom-color: transparent;
+  }
+}
+
+/* Log in and log out */
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  max-width: 24rem;
+  margin-top: clamp(2rem, 8vh, 5rem);
+  padding: 1.25rem 1.25rem 0.75rem;
+  border-top: 6px solid var(--vermilion);
+  background: var(--paper-deep);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+.login-form h2 {
+  margin: 0 0 1.25rem;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-style: italic;
+  font-weight: 500;
+}
+
+.login-form label {
+  margin-bottom: 0.4rem;
+  color: var(--ink-soft);
+}
+
+.login-form input {
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--ink);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+}
+
+.login-form button {
+  margin-top: 0.9rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--card);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--duration-fast), border-color var(--duration-fast);
+}
+
+.login-form button:hover:not(:disabled) {
+  border-color: var(--vermilion);
+  background: var(--vermilion);
+}
+
+.login-form button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.login-error {
+  min-height: 1.4em;
+  margin: 0.75rem 0 0;
+  color: var(--vermilion);
+  font-weight: 500;
+}
+
+.logout-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.logout-button:hover {
+  color: var(--vermilion);
+}
+
+.login-form input:focus-visible,
+.login-form button:focus-visible,
+.logout-button:focus-visible {
+  outline: 2px solid var(--vermilion);
+  outline-offset: 2px;
+}
+
+/* 404: a misregistered proof, the two spot inks slightly out of line. */
+
+.not-found {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1.5rem clamp(2rem, 6vw, 5rem);
+  margin-top: clamp(2rem, 6vh, 4rem);
+}
+
+.not-found-code {
+  margin: 0;
+  color: var(--vermilion);
+  font-size: clamp(8rem, 4rem + 20vw, 20rem);
+  font-weight: 300;
+  font-variant-numeric: lining-nums;
+  font-variation-settings: 'opsz' 144, 'SOFT' 40;
+  line-height: 0.8;
+  letter-spacing: -0.05em;
+  text-shadow: 0.025em 0.02em 0 var(--ochre);
+}
+
+.not-found-body {
+  flex: 1 1 20rem;
+  min-width: 0;
+  max-width: 34rem;
+}
+
+.not-found-message {
+  margin: 0 0 1rem;
+  font-size: 1.4rem;
+  font-style: italic;
+  line-height: 1.3;
+}
+
+.not-found-path {
+  margin: 0 0 1.5rem;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.not-found-path code {
+  font-family: var(--font-mono);
+}
+
+.not-found-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.not-found-home {
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--card);
+  text-decoration: none;
+  transition: background-color var(--duration-fast), border-color var(--duration-fast);
+}
+
+.not-found-home:hover {
+  border-color: var(--vermilion);
+  background: var(--vermilion);
+}
+
+.board-error {
+  max-width: 34rem;
+  margin: 18dvh auto 0;
+  padding: 0 1rem;
+}
+
+@keyframes saving-pulse {
+  from {
+    opacity: 0.25;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes notice-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task[data-saving='true']::before {
+    animation: none;
+    opacity: 1;
+  }
+
+  .notice,
+  .timeline {
+    animation: none;
+  }
+
+  .time-tip {
+    transition: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .masthead-meta {
+    align-items: flex-start;
+  }
+
+  .columns {
+    grid-template-columns: repeat(4, minmax(78vw, 1fr));
+  }
+}
