@@ -69,16 +69,11 @@ function createAnnouncements(board: Board): Announcements {
   }
 }
 
-interface BoardViewProps {
-  readonly simulateOutage: boolean
-}
-
-export function BoardView({ simulateOutage }: BoardViewProps) {
+export function BoardView() {
   const board = useOptimisticBoard()
   const pendingTaskIds = usePendingTaskIds()
   const [notice, setNotice] = useState<Notice | null>(null)
   const send = useBoardCommand({
-    simulateOutage,
     onFailure: (command) =>
       setNotice((previous) => ({
         id: (previous?.id ?? 0) + 1,
@@ -116,15 +111,6 @@ export function BoardView({ simulateOutage }: BoardViewProps) {
             History
           </Link>
           <ThemeSwitch />
-          <Link
-            to="/"
-            search={simulateOutage ? {} : { outage: true }}
-            className="outage-toggle"
-            data-active={simulateOutage}
-          >
-            <span className="outage-dot" aria-hidden="true" />
-            Simulate outage: {simulateOutage ? 'on' : 'off'}
-          </Link>
           <LogoutButton />
         </div>
       </header>

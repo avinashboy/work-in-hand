@@ -109,35 +109,6 @@ body {
   color: var(--ink-soft);
 }
 
-.outage-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.35rem 0.7rem;
-  border: 1px solid var(--ink);
-  color: var(--ink);
-  text-decoration: none;
-  transition: background-color var(--duration-fast), color var(--duration-fast);
-}
-
-.outage-toggle:hover {
-  background: var(--ink);
-  color: var(--card);
-}
-
-.outage-toggle[data-active='true'] {
-  border-color: var(--vermilion);
-  background: var(--vermilion);
-  color: var(--card);
-}
-
-.outage-dot {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-  background: currentColor;
-}
-
 .theme-switch {
   display: inline-flex;
   border: 1px solid var(--ink);
@@ -579,7 +550,7 @@ body {
   color: var(--card);
 }
 
-:is(.task-grab, .task-delete, .add-task input, .add-task button, .outage-toggle, .notice button):focus-visible {
+:is(.task-grab, .task-delete, .add-task input, .add-task button, .notice button):focus-visible {
   outline: 2px solid var(--vermilion);
   outline-offset: -2px;
 }

@@ -72,6 +72,7 @@ function commandsFor(task: StoredTaskDetail, patch: TaskPatch, at: number): read
   ]
 }
 
+/** What the public API can do. Changes go through commands, so the UI's rules apply too. */
 export function createTaskOperations({
   db,
   now,

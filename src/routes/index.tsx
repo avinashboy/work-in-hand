@@ -1,27 +1,16 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { z } from 'zod'
 import { boardQueryOptions } from '../features/board/board-queries'
 import { BoardView } from '../features/board/components/BoardView'
 
-const boardSearchSchema = z.object({
-  outage: z.boolean().optional().catch(undefined),
-})
-
 export const Route = createFileRoute('/')({
-  validateSearch: boardSearchSchema,
   head: () => ({
     meta: [{ title: 'Work in Hand' }],
   }),
   loader: ({ context }) =>
     context.queryClient.ensureQueryData(boardQueryOptions),
-  component: BoardPage,
+  component: BoardView,
   errorComponent: BoardLoadError,
 })
-
-function BoardPage() {
-  const { outage } = Route.useSearch()
-  return <BoardView simulateOutage={outage === true} />
-}
 
 function BoardLoadError() {
   return (

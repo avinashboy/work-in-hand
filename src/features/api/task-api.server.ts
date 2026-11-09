@@ -46,6 +46,10 @@ async function refuseIfOverLimit(
   }
 }
 
+/**
+ * Entry point for the public API. The rate limit comes before the key check so
+ * guessing keys is throttled too. Documented in docs/API.md.
+ */
 export async function handleTaskApi(
   request: Request,
   options: TaskApiOptions,

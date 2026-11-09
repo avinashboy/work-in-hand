@@ -91,6 +91,7 @@ function moveTask(board: Board, task: Task, command: MoveCommand): Board {
   )
 }
 
+/** The only place a command's effect is decided. Runs in the browser and on the server. */
 export function applyCommand(board: Board, command: BoardCommand): Board {
   const existing = findTask(board, command.taskId)
 

@@ -162,6 +162,7 @@ function filterClauses(query: TaskQuery): readonly Clause[] {
   ]
 }
 
+/** Searches the board and the history together. Every filter value is a bound parameter. */
 export function listTasks(db: SqlDatabase, query: TaskQuery): TaskListPage {
   const clauses = filterClauses(query)
   const where = clauses.length ? `WHERE ${clauses.map(({ sql }) => sql).join(' AND ')}` : ''

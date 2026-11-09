@@ -4,6 +4,6 @@
 # Without it, a deployed site lets nobody in.
 APP_PASSWORD=
 
-# The key outside apps send to POST /api/tasks, at least 32 characters.
+# The key outside apps send to the API (docs/API.md), at least 32 characters.
 # Without it, every API call is refused.
 API_KEY=

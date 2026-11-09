@@ -53,6 +53,7 @@ function fromHex(hex: string): Uint8Array<ArrayBuffer> {
   return Uint8Array.from(hex.match(/../g) ?? [], (pair) => Number.parseInt(pair, 16))
 }
 
+/** Stateless: the signed expiry time is the whole session, so nothing is stored per browser. */
 export async function createSessionCookie(password: string, now: number): Promise<string> {
   const expiresAt = String(now + SESSION_LIFETIME_MS)
   const signature = await crypto.subtle.sign(

@@ -75,6 +75,7 @@ function ipv6Network(ip: string): string {
   return [...start, ...zeros, ...end].slice(0, IPV6_NETWORK_GROUPS).join(':')
 }
 
+/** Who to count a request against. Cloudflare sets this header and clients can't forge it. */
 export function clientKey(request: Request): string {
   const ip = request.headers.get('cf-connecting-ip') ?? 'unknown'
   return ip.includes(':') ? ipv6Network(ip) : ip

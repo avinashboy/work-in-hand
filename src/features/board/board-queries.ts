@@ -14,7 +14,6 @@ import {
 } from './board-api'
 import type { Board, BoardCommand } from './board-model'
 import { applyCommand } from './board-reducer'
-import { simulateNetwork } from './simulated-network'
 
 const BOARD_QUERY_KEY = ['board'] as const
 const BOARD_COMMAND_KEY = ['board-command'] as const
@@ -48,7 +47,6 @@ export function useDeleteArchivedTask() {
 }
 
 interface BoardCommandOptions {
-  readonly simulateOutage: boolean
   readonly onFailure: (command: BoardCommand) => void
 }
 
@@ -58,7 +56,6 @@ interface BoardCommandOptions {
  * unsaved commands reach the screen.
  */
 export function useBoardCommand({
-  simulateOutage,
   onFailure,
 }: BoardCommandOptions): (command: BoardCommand) => void {
   const queryClient = useQueryClient()
@@ -66,10 +63,8 @@ export function useBoardCommand({
   const { mutate } = useMutation({
     mutationKey: BOARD_COMMAND_KEY,
     scope: { id: 'board' },
-    mutationFn: async (command: BoardCommand): Promise<Board> => {
-      await simulateNetwork(simulateOutage)
-      return applyBoardCommand({ data: command })
-    },
+    mutationFn: (command: BoardCommand): Promise<Board> =>
+      applyBoardCommand({ data: command }),
     onMutate: () => queryClient.cancelQueries({ queryKey: BOARD_QUERY_KEY }),
     onSuccess: async (board) => {
       // A refetch that began before this save would overwrite it with old data.

@@ -36,10 +36,6 @@ vi.mock('./board-api', () => ({
     }),
 }))
 
-vi.mock('./simulated-network', () => ({
-  simulateNetwork: () => Promise.resolve(),
-}))
-
 const moveA: BoardCommand = {
   type: 'move',
   taskId: 'a',
@@ -87,7 +83,7 @@ function setup(onFailure = vi.fn()) {
     () => ({
       board: useOptimisticBoard(),
       pendingTaskIds: usePendingTaskIds(),
-      send: useBoardCommand({ simulateOutage: false, onFailure }),
+      send: useBoardCommand({ onFailure }),
       rerender: useState(0)[1],
     }),
     { wrapper },

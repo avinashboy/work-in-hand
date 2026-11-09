@@ -42,6 +42,7 @@ export interface TaskApiStore {
 type Handler = (request: Request) => Promise<Response>
 type Routes = Readonly<Record<string, Handler>>
 
+/** Anything under /api/tasks/ answers as the API, so a mistyped path gets JSON, not a login page. */
 export function isApiPath(pathname: string): boolean {
   return pathname === TASKS_PATH || pathname === SUMMARY_PATH || pathname.startsWith(`${TASKS_PATH}/`)
 }
@@ -155,6 +156,7 @@ function routesFor(pathname: string, store: TaskApiStore): Routes | null {
   return { POST: async () => respondToChange(await store.archiveTask(taskId.data)) }
 }
 
+/** Only call this once the API key has been checked. */
 export function routeTaskApi(request: Request, store: TaskApiStore): Promise<Response> | Response {
   const routes = routesFor(new URL(request.url).pathname, store)
   if (routes === null) return fail(404, 'No such endpoint')

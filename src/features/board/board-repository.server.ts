@@ -308,6 +308,7 @@ function readArchivePage(db: SqlDatabase, requestedPage: number): ArchivePage {
   return { tasks, page, pageCount, total }
 }
 
+/** All board storage. Creates any missing tables, so call it once at start-up. */
 export function createBoardRepository({
   db,
   now,
