@@ -60,6 +60,11 @@ export const boardCommandSchema = z.discriminatedUnion('type', [
     at: timestampSchema,
   }),
   z.object({
+    type: z.literal('set-title'),
+    taskId: taskIdSchema,
+    title: taskTitleSchema,
+  }),
+  z.object({
     type: z.literal('set-notes'),
     taskId: taskIdSchema,
     notes: taskNotesSchema,

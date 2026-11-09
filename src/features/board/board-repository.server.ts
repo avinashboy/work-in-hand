@@ -15,7 +15,6 @@ import {
   type Task,
 } from './board-model'
 import { applyCommand, countTasks } from './board-reducer'
-import type { BoardSnapshot } from './board-snapshot'
 
 const NO_TASKS: Board = { columns: [] }
 
@@ -99,8 +98,6 @@ interface BoardRepositoryOptions {
   readonly db: SqlDatabase
   readonly now: () => number
   readonly seedBoard: Board
-  /** Only called for a brand-new database, which then starts from its result. */
-  readonly loadSnapshot?: () => BoardSnapshot | undefined
 }
 
 function saveTasks(db: SqlDatabase, board: Board): void {
@@ -110,6 +107,7 @@ function saveTasks(db: SqlDatabase, board: Board): void {
         `INSERT INTO tasks (id, title, column_id, position, created_at, moved_at, done_at)
          VALUES (?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (id) DO UPDATE SET
+           title = excluded.title,
            column_id = excluded.column_id,
            position = excluded.position,
            moved_at = excluded.moved_at,
@@ -173,33 +171,7 @@ function saveChangedNotes(db: SqlDatabase, previous: Board, next: Board): void {
     .forEach((task) => writeNotes(db, task.id, task.notes))
 }
 
-function importSnapshot(db: SqlDatabase, snapshot: BoardSnapshot): void {
-  for (const task of snapshot.tasks) {
-    db.run(
-      `INSERT INTO tasks (id, title, column_id, position, created_at, moved_at,
-                          done_at, archived_at, archive_reason)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      task.id,
-      task.title,
-      task.columnId,
-      task.position,
-      task.createdAt,
-      task.movedAt,
-      task.doneAt,
-      task.archivedAt,
-      task.archiveReason,
-    )
-  }
-  for (const move of snapshot.moves) {
-    db.run(INSERT_MOVE, move.taskId, move.columnId, move.at)
-  }
-}
-
-function setUpSchema(
-  db: SqlDatabase,
-  seedBoard: Board,
-  loadSnapshot: BoardRepositoryOptions['loadSnapshot'],
-): void {
+function setUpSchema(db: SqlDatabase, seedBoard: Board): void {
   db.transaction(() => {
     db.script(NOTES_SCHEMA)
     const isNewDatabase =
@@ -208,11 +180,6 @@ function setUpSchema(
     if (!isNewDatabase) return
 
     db.script(SCHEMA)
-    const snapshot = loadSnapshot?.()
-    if (snapshot) {
-      importSnapshot(db, snapshot)
-      return
-    }
     saveTasks(db, seedBoard)
     recordMoves(db, NO_TASKS, seedBoard)
   })
@@ -344,9 +311,8 @@ export function createBoardRepository({
   db,
   now,
   seedBoard,
-  loadSnapshot,
 }: BoardRepositoryOptions): BoardRepository {
-  setUpSchema(db, seedBoard, loadSnapshot)
+  setUpSchema(db, seedBoard)
 
   const get = (): Board =>
     db.transaction(() => {

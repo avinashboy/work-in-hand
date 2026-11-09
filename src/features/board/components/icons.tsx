@@ -19,6 +19,15 @@ export function ArchiveIcon() {
   )
 }
 
+export function PencilIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <path d="M4 20l1-4.5L16.5 4l3.5 3.5L8.5 19z" />
+      <path d="M14 6.5l3.5 3.5" />
+    </svg>
+  )
+}
+
 export function TrashIcon() {
   return (
     <svg {...ICON_PROPS}>

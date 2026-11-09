@@ -27,6 +27,7 @@ function renderCard(task: Task = doneTask) {
             isSaving={false}
             onDelete={vi.fn()}
             onConfirm={onConfirm}
+            onSaveTitle={vi.fn()}
             onSaveNotes={vi.fn()}
           />
         </ul>

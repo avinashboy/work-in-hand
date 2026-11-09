@@ -17,7 +17,7 @@ export default defineConfig({
   server: {
     // The dev server would otherwise hand your data files to any browser.
     fs: {
-      deny: [...VITE_DEFAULT_FS_DENY, '.dev.vars', '**/data/*.db*', '**/.wrangler/**'],
+      deny: [...VITE_DEFAULT_FS_DENY, '.dev.vars', '**/.wrangler/**'],
     },
   },
   plugins: [

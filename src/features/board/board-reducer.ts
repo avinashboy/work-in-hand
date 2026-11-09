@@ -41,12 +41,16 @@ function withoutTask(board: Board, taskId: string): Board {
   }
 }
 
-function withNotes(board: Board, taskId: string, notes: string): Board {
+function withEdit(
+  board: Board,
+  taskId: string,
+  edit: Partial<Pick<Task, 'title' | 'notes'>>,
+): Board {
   return {
     columns: board.columns.map((column) => ({
       ...column,
       tasks: column.tasks.map((task) =>
-        task.id === taskId ? { ...task, notes } : task,
+        task.id === taskId ? { ...task, ...edit } : task,
       ),
     })),
   }
@@ -109,8 +113,10 @@ export function applyCommand(board: Board, command: BoardCommand): Board {
           },
         ],
       }))
+    case 'set-title':
+      return existing ? withEdit(board, command.taskId, { title: command.title }) : board
     case 'set-notes':
-      return existing ? withNotes(board, command.taskId, command.notes) : board
+      return existing ? withEdit(board, command.taskId, { notes: command.notes }) : board
     case 'delete':
       return existing ? withoutTask(board, command.taskId) : board
     case 'archive':

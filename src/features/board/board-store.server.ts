@@ -14,21 +14,9 @@ import {
   type BoardRepository,
   type NewTask,
 } from './board-repository.server'
-import { boardSnapshotSchema, type BoardSnapshot } from './board-snapshot'
 
 /** One person, one board, so there is only ever one of these objects. */
 const BOARD_STORE_NAME = 'board'
-
-// Written by `npm run export-board`. Bundled into the server only, if present.
-const exportedBoards = import.meta.glob('/data/initial-board.json', {
-  eager: true,
-  import: 'default',
-})
-
-function readExportedBoard(): BoardSnapshot | undefined {
-  const [exported] = Object.values(exportedBoards)
-  return exported === undefined ? undefined : boardSnapshotSchema.parse(exported)
-}
 
 export class BoardStore extends DurableObject<Cloudflare.Env> {
   private readonly repository: BoardRepository
@@ -41,7 +29,6 @@ export class BoardStore extends DurableObject<Cloudflare.Env> {
       db,
       now: Date.now,
       seedBoard: createSeedBoard(Date.now()),
-      loadSnapshot: readExportedBoard,
     })
     this.loginAttempts = createLoginAttempts({ db, now: Date.now })
   }

@@ -32,6 +32,7 @@ interface Notice {
 const FAILURE_MESSAGES: Record<BoardCommand['type'], string> = {
   move: 'That move didn’t save, so the card went back.',
   create: 'That card didn’t save, so it was removed.',
+  'set-title': 'That title didn’t save, so the old one is back.',
   'set-notes': 'Those notes didn’t save, so the old ones are back.',
   delete: 'That delete didn’t save, so the card is back.',
   archive: 'That didn’t save, so the card stayed in Done.',
@@ -147,6 +148,7 @@ export function BoardView({ simulateOutage }: BoardViewProps) {
               onCreate={createTask}
               onDelete={(taskId) => send({ type: 'delete', taskId })}
               onConfirm={(taskId) => send({ type: 'archive', taskId })}
+              onSaveTitle={(taskId, title) => send({ type: 'set-title', taskId, title })}
               onSaveNotes={(taskId, notes) => send({ type: 'set-notes', taskId, notes })}
             />
           ))}

@@ -7,8 +7,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "deploy": "npm run build && wrangler deploy",
-    "cf-typegen": "wrangler types",
-    "export-board": "node scripts/export-board.ts"
+    "cf-typegen": "wrangler types"
   },
   "engines": {
     "node": ">=24"

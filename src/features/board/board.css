@@ -342,7 +342,7 @@ body {
   color: var(--vermilion);
 }
 
-.notes-dialog {
+.card-editor {
   width: min(38rem, calc(100vw - 2rem));
   padding: 1.25rem;
   border: 0;
@@ -354,11 +354,11 @@ body {
   box-shadow: var(--shadow-card-hover);
 }
 
-.notes-dialog::backdrop {
+.card-editor::backdrop {
   background: rgb(0 0 0 / 45%);
 }
 
-.notes-dialog h2 {
+.card-editor h2 {
   margin: 0 0 1rem;
   font-family: var(--font-display);
   font-size: 1.4rem;
@@ -367,13 +367,17 @@ body {
   overflow-wrap: anywhere;
 }
 
-.notes-dialog label {
+.card-editor label {
   display: block;
   margin-bottom: 0.4rem;
   color: var(--ink-soft);
 }
 
-.notes-dialog textarea {
+.card-editor input {
+  margin-bottom: 0.9rem;
+}
+
+.card-editor :is(input, textarea) {
   display: block;
   box-sizing: border-box;
   width: 100%;
@@ -386,14 +390,14 @@ body {
   resize: vertical;
 }
 
-.notes-actions {
+.card-editor-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.6rem;
   margin-top: 0.9rem;
 }
 
-.notes-actions button {
+.card-editor-actions button {
   padding: 0.6rem 0.9rem;
   border: 1px solid var(--ink);
   background: none;
@@ -402,20 +406,26 @@ body {
   cursor: pointer;
 }
 
-.notes-actions .notes-save {
+.card-editor-actions .card-editor-save {
   background: var(--ink);
   color: var(--card);
   font-weight: 500;
 }
 
-.notes-actions .notes-save:hover {
+.card-editor-actions .card-editor-save:hover:not(:disabled) {
   border-color: var(--vermilion);
   background: var(--vermilion);
 }
 
+.card-editor-actions .card-editor-save:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .task-notes-open:focus-visible,
-.notes-dialog textarea:focus-visible,
-.notes-actions button:focus-visible {
+.task-edit:focus-visible,
+.card-editor :is(input, textarea):focus-visible,
+.card-editor-actions button:focus-visible {
   outline: 2px solid var(--vermilion);
   outline-offset: 2px;
 }
@@ -471,6 +481,39 @@ body {
 
 @media (hover: none) {
   .task-delete {
+    opacity: 1;
+  }
+}
+
+/* Stacked under the delete button, so long titles keep their full width. */
+.task-edit {
+  position: absolute;
+  top: 2.05rem;
+  right: 0.3rem;
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--duration-fast), color var(--duration-fast);
+}
+
+.task:hover .task-edit,
+.task-edit:focus-visible {
+  opacity: 1;
+}
+
+.task-edit:hover {
+  color: var(--vermilion);
+}
+
+@media (hover: none) {
+  .task-edit {
     opacity: 1;
   }
 }

@@ -13,6 +13,7 @@ interface BoardColumnProps {
   readonly onCreate: (columnId: ColumnId, title: string) => void
   readonly onDelete: (taskId: string) => void
   readonly onConfirm: (taskId: string) => void
+  readonly onSaveTitle: (taskId: string, title: string) => void
   readonly onSaveNotes: (taskId: string, notes: string) => void
 }
 
@@ -22,6 +23,7 @@ export function BoardColumn({
   onCreate,
   onDelete,
   onConfirm,
+  onSaveTitle,
   onSaveNotes,
 }: BoardColumnProps) {
   const { setNodeRef } = useDroppable({
@@ -56,6 +58,7 @@ export function BoardColumn({
               isSaving={pendingTaskIds.has(task.id)}
               onDelete={onDelete}
               onConfirm={onConfirm}
+              onSaveTitle={onSaveTitle}
               onSaveNotes={onSaveNotes}
             />
           ))}
