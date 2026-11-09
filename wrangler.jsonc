@@ -19,5 +19,30 @@
   },
   "exports": {
     "BoardStore": { "type": "durable-object", "storage": "sqlite" }
+  },
+  // The public demo: a separate Worker with its own URL and its own data.
+  // Built only by `npm run deploy:demo`. It has no secrets.
+  "env": {
+    "demo": {
+      "name": "tanstack-demo-public",
+      "ratelimits": [
+        {
+          "name": "DEMO_CLIENT_LIMITER",
+          "namespace_id": "1002",
+          "simple": { "limit": 20, "period": 60 }
+        },
+        {
+          "name": "DEMO_SITE_LIMITER",
+          "namespace_id": "1003",
+          "simple": { "limit": 30, "period": 60 }
+        }
+      ],
+      "durable_objects": {
+        "bindings": [{ "name": "BOARD_STORE", "class_name": "BoardStore" }]
+      },
+      "exports": {
+        "BoardStore": { "type": "durable-object", "storage": "sqlite" }
+      }
+    }
   }
 }

@@ -2,6 +2,8 @@ import { DurableObject, env } from 'cloudflare:workers'
 import { createDurableObjectSql } from '../../lib/durable-object-sql.server'
 import type { LoginAttemptStore } from '../auth/auth-gate.server'
 import { createLoginAttempts, type LoginAttempts } from '../auth/login-attempts.server'
+import { createDemoBoard, type DemoBoard } from '../demo/demo-board.server'
+import { IS_DEMO } from '../demo/demo-config'
 import {
   createSeedBoard,
   type ArchivePage,
@@ -29,16 +31,33 @@ const BOARD_STORE_NAME = 'board'
 export class BoardStore extends DurableObject<Cloudflare.Env> {
   private readonly repository: BoardRepository
   private readonly loginAttempts: LoginAttempts
+  private readonly demo: DemoBoard | null
 
   constructor(ctx: DurableObjectState, workerEnv: Cloudflare.Env) {
     super(ctx, workerEnv)
     const db = createDurableObjectSql(ctx.storage)
-    this.repository = createBoardRepository({
-      db,
-      now: Date.now,
-      seedBoard: createSeedBoard(Date.now()),
-    })
+    this.demo = IS_DEMO ? createDemoBoard({ db, now: Date.now }) : null
+    this.repository =
+      this.demo ??
+      createBoardRepository({
+        db,
+        now: Date.now,
+        seedBoard: createSeedBoard(Date.now()),
+      })
     this.loginAttempts = createLoginAttempts({ db, now: Date.now })
+  }
+
+  /** Demo only: deletes expired cards even when nobody is visiting. */
+  async alarm(): Promise<void> {
+    this.demo?.deleteExpired()
+    await this.scheduleDemoCleanup()
+  }
+
+  /** An alarm already set is always the earliest, since newer cards expire later. */
+  private async scheduleDemoCleanup(): Promise<void> {
+    const expiry = this.demo?.nextExpiry() ?? null
+    if (expiry === null || (await this.ctx.storage.getAlarm()) !== null) return
+    await this.ctx.storage.setAlarm(expiry)
   }
 
   reserveLoginAttempt(client: string): boolean {
@@ -53,8 +72,14 @@ export class BoardStore extends DurableObject<Cloudflare.Env> {
     return this.repository.get()
   }
 
-  applyCommand(command: BoardCommand): Board {
-    return this.repository.apply(command)
+  async applyCommand(command: BoardCommand): Promise<Board> {
+    const board = this.repository.apply(command)
+    // The change is already saved, so a failure here mustn't report it as lost.
+    // Reads still clear expired cards, and the next change tries this again.
+    await this.scheduleDemoCleanup().catch((error: unknown) => {
+      console.error('Could not schedule the demo cleanup:', error)
+    })
+    return board
   }
 
   createTask(input: NewTask): Task | null {

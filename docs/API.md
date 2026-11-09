@@ -2,7 +2,7 @@
 
 Lets another application read and change the board: a voice assistant, a script, or a dashboard.
 
-**Base URL:** `https://tanstack-demo.ask1846.workers.dev`
+**Base URL:** `https://YOUR-SITE.workers.dev` (your own deployment; the public demo has no API)
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -118,7 +118,7 @@ When sorting by `doneAt`, cards that aren't done come last with `desc` and first
 Lists leave out each card's timeline. Use [Get a card](#get-a-card) for that.
 
 ```bash
-curl "https://tanstack-demo.ask1846.workers.dev/api/tasks?status=ongoing&column=backlog,in%20progress&search=invoice&order=asc&limit=2" \
+curl "https://YOUR-SITE.workers.dev/api/tasks?status=ongoing&column=backlog,in%20progress&search=invoice&order=asc&limit=2" \
   -H "Authorization: Bearer YOUR_KEY"
 ```
 
@@ -166,7 +166,7 @@ Spaces around the title and notes are removed. Other fields are ignored. New car
 **Retrying creates a duplicate.** Each successful call makes a new card, so after a timeout, check with [List cards](#list-cards) before sending it again.
 
 ```bash
-curl -X POST "https://tanstack-demo.ask1846.workers.dev/api/tasks" \
+curl -X POST "https://YOUR-SITE.workers.dev/api/tasks" \
   -H "Authorization: Bearer YOUR_KEY" \
   -H "Content-Type: application/json" \
   -d '{"title":"Call the supplier","column":"In Progress","notes":"Ask about the March invoice"}'
@@ -227,7 +227,7 @@ Send only what should change, and at least one field. All the changes apply toge
 - Repeating the same request is safe: the second one leaves the card as it was.
 
 ```bash
-curl -X PATCH "https://tanstack-demo.ask1846.workers.dev/api/tasks/CARD_ID" \
+curl -X PATCH "https://YOUR-SITE.workers.dev/api/tasks/CARD_ID" \
   -H "Authorization: Bearer YOUR_KEY" \
   -H "Content-Type: application/json" \
   -d '{"title":"New name","column":"Done"}'
@@ -244,7 +244,7 @@ DELETE /api/tasks/:id
 Permanently removes a card from the board or from History, along with its notes and timeline. It can't be undone.
 
 ```bash
-curl -X DELETE "https://tanstack-demo.ask1846.workers.dev/api/tasks/CARD_ID" \
+curl -X DELETE "https://YOUR-SITE.workers.dev/api/tasks/CARD_ID" \
   -H "Authorization: Bearer YOUR_KEY"
 ```
 
@@ -265,7 +265,7 @@ POST /api/tasks/:id/archive
 Takes no body. The card must be in Done. `200 OK` returns the card with `archived: true`, `archiveReason: "confirmed"` and its `moves`. A card outside Done, or already in History, returns `409`.
 
 ```bash
-curl -X POST "https://tanstack-demo.ask1846.workers.dev/api/tasks/CARD_ID/archive" \
+curl -X POST "https://YOUR-SITE.workers.dev/api/tasks/CARD_ID/archive" \
   -H "Authorization: Bearer YOUR_KEY"
 ```
 

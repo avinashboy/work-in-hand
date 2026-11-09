@@ -121,6 +121,16 @@ API changes go through the same commands as the UI, so both follow the same rule
 - `board.css` holds all the styles, with colours as CSS variables for the light and dark themes. `board-theme.ts` remembers the choice.
 - `board-clock.ts` is a single shared timer that keeps relative times up to date.
 
+## Public demo
+
+`npm run deploy:demo` builds with `--mode demo` and deploys a separate Worker, `tanstack-demo-public`, from `env.demo` in `wrangler.jsonc`. It has its own Durable Object, so its data is separate from the private site, and it has no secrets. `npm run deploy` still deploys only the private site.
+
+- `IS_DEMO` in `demo-config.ts` is fixed at build time. The limits are set there too: card lifetime, card cap and daily writes.
+- `demo-gate.server.ts` runs instead of the login. It closes `/api/*`, redirects `/login`, and applies the per-visitor and whole-site rate limits.
+- `demo-board.server.ts` wraps the normal repository. Cards are deleted a fixed time after creation, on every read and write, and by a Durable Object alarm when nobody is visiting.
+
+Free-plan limits are per account, so heavy demo traffic can also affect the private site.
+
 ## Tests
 
 Tests use Vitest. The coverage threshold is 80%, set in `vitest.config.ts`. `board-store.server.ts` and `board-api.ts` are left out of coverage because they only run on Cloudflare and just forward calls.

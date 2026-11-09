@@ -1,5 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { DEMO_CARD_LIFETIME_MS, IS_DEMO } from '../../demo/demo-config'
 import { ARCHIVE_AFTER_MS, type ColumnId, type Task } from '../board-model'
 import { CardTime } from './CardTime'
 import { ArchiveIcon } from './icons'
@@ -42,6 +43,9 @@ function TaskTimes({ task, dragListeners }: TaskTimesProps) {
       <span className="task-meta">
         <CardTime label="Added" value={task.createdAt} />
         {hasLanded ? <CardTime label="Moved here" value={task.movedAt} /> : null}
+        {IS_DEMO ? (
+          <CardTime label="Deleted" value={task.createdAt + DEMO_CARD_LIFETIME_MS} />
+        ) : null}
       </span>
     </div>
   )
@@ -129,10 +133,12 @@ export function TaskCard({
         <div className="task-finish">
           <span className="task-meta">
             <CardTime label="Done" value={task.doneAt} />
-            <CardTime
-              label="Goes to history"
-              value={task.doneAt + ARCHIVE_AFTER_MS}
-            />
+            {IS_DEMO ? null : (
+              <CardTime
+                label="Goes to history"
+                value={task.doneAt + ARCHIVE_AFTER_MS}
+              />
+            )}
           </span>
           <button
             type="button"

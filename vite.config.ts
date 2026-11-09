@@ -13,16 +13,26 @@ const VITE_DEFAULT_FS_DENY = [
   '**/.git/**',
 ]
 
-export default defineConfig({
-  server: {
-    // The dev server would otherwise hand your data files to any browser.
-    fs: {
-      deny: [...VITE_DEFAULT_FS_DENY, '.dev.vars', '**/.wrangler/**'],
+const DEMO_MODE = 'demo'
+
+export default defineConfig(({ mode }) => {
+  // Ties the demo build to the demo Worker, so it can't reach the private site.
+  if (mode === DEMO_MODE) process.env.CLOUDFLARE_ENV = DEMO_MODE
+  else if (process.env.CLOUDFLARE_ENV === DEMO_MODE) {
+    throw new Error('CLOUDFLARE_ENV is "demo", but this is not a demo build.')
+  }
+
+  return {
+    server: {
+      // The dev server would otherwise hand your data files to any browser.
+      fs: {
+        deny: [...VITE_DEFAULT_FS_DENY, '.dev.vars', '**/.wrangler/**'],
+      },
     },
-  },
-  plugins: [
-    cloudflare({ viteEnvironment: { name: 'ssr' } }),
-    tanstackStart(),
-    viteReact(),
-  ],
+    plugins: [
+      cloudflare({ viteEnvironment: { name: 'ssr' } }),
+      tanstackStart(),
+      viteReact(),
+    ],
+  }
 })

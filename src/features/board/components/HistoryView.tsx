@@ -1,6 +1,8 @@
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { LogoutButton } from '../../auth/components/LogoutButton'
+import { DemoBanner } from '../../demo/components/DemoBanner'
+import { IS_DEMO } from '../../demo/demo-config'
 import { archiveQueryOptions, useDeleteArchivedTask } from '../board-queries'
 import { HistoryRow } from './HistoryRow'
 import { ThemeSwitch } from './ThemeSwitch'
@@ -15,6 +17,7 @@ export function HistoryView({ page }: HistoryViewProps) {
 
   return (
     <main className="board-page">
+      {IS_DEMO ? <DemoBanner /> : null}
       <header className="masthead">
         <h1>History</h1>
         <div className="masthead-meta">
@@ -25,7 +28,7 @@ export function HistoryView({ page }: HistoryViewProps) {
             Back to the board
           </Link>
           <ThemeSwitch />
-          <LogoutButton />
+          {IS_DEMO ? null : <LogoutButton />}
         </div>
       </header>
 
@@ -37,8 +40,9 @@ export function HistoryView({ page }: HistoryViewProps) {
 
       {data.tasks.length === 0 ? (
         <p className="history-empty">
-          Nothing here yet. Press the archive button on a card in Done, or leave
-          it there for 24 hours.
+          {IS_DEMO
+            ? 'Nothing here yet. Press the archive button on a card in Done.'
+            : 'Nothing here yet. Press the archive button on a card in Done, or leave it there for 24 hours.'}
         </p>
       ) : (
         <table className="history-table">

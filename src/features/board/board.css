@@ -27,25 +27,28 @@
   --duration-fast: 140ms;
 }
 
-/* The press room after dark: warm black stock, cream ink, brighter spot colours. */
+/*
+ * The same print shop on dark walnut stock. It keeps light mode's layering:
+ * columns are trays set below the page, and cards sit raised above them.
+ */
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --paper: #171411;
-  --paper-deep: #211d18;
-  --card: #2d2821;
-  --ink: #f0e8d9;
-  --ink-soft: #b5ab9a;
-  --rule: #f0e8d92e;
-  --vermilion: #f27e5e;
-  --ochre: #dfae4f;
-  --forest: #74c398;
-  --slate: #a69f8f;
-  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 .94 0 0 0 0 .91 0 0 0 0 .85 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E");
+  --paper: #2b2018;
+  --paper-deep: #1c1510;
+  --card: #443428;
+  --ink: #f5eddf;
+  --ink-soft: #cfc1ab;
+  --rule: #f5eddf33;
+  --vermilion: #ff7a52;
+  --ochre: #f0b93f;
+  --forest: #5fd18f;
+  --slate: #b7ab95;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 .85 0 0 0 0 .6 0 0 0 0 .38 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E");
 
-  --shadow-card: 1px 2px 0 #00000080;
-  --shadow-card-hover: 3px 5px 0 #0000009e;
-  --shadow-lifted: 10px 18px 28px #000000a6;
+  --shadow-card: 1px 2px 0 #0d0805;
+  --shadow-card-hover: 3px 5px 0 #0d0805;
+  --shadow-lifted: 10px 18px 28px #0d0805b3;
 }
 
 body {
@@ -133,6 +136,22 @@ body {
 :root[data-theme='dark'] .theme-option[data-option='dark'] {
   background: var(--ink);
   color: var(--card);
+}
+
+/* The notice on the public demo */
+
+.demo-banner {
+  margin: 0 0 1.25rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px dashed var(--ochre);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.demo-banner strong {
+  color: var(--vermilion);
+  font-weight: 500;
 }
 
 /* Columns */

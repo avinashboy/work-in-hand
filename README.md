@@ -2,7 +2,19 @@
 
 A private Kanban board that runs entirely on Cloudflare. Drag cards between Backlog, In progress, In review and Done, keep detailed notes on each one, and let other apps such as a voice assistant add and update cards through an API.
 
-**Live site:** https://tanstack-demo.ask1846.workers.dev
+**Live demo:** https://tanstack-demo-public.ask1846.workers.dev
+
+The demo needs no login and is shared by everyone who opens it, so please don't add anything private. Cards are deleted 10 minutes after they're added, and there's room for 20 at a time. The API and login are switched off there.
+
+## Screenshots
+
+| Login | Board |
+|---|---|
+| ![The login page in light mode](image/light/login.png) | ![The board in dark mode](image/dark/main.png) |
+
+| History | Page not found |
+|---|---|
+| ![The History page with a card's timeline, in light mode](image/light/history.png) | ![The page not found screen in dark mode](image/dark/not-found.png) |
 
 ## Features
 
@@ -41,7 +53,8 @@ To try the API locally, copy `.dev.vars.example` to `.dev.vars`, set `API_KEY` t
 | `npm run dev` | Starts the app on port 3000 |
 | `npm run build` | Builds for production |
 | `npm run preview` | Serves the production build locally |
-| `npm run deploy` | Builds and deploys to Cloudflare |
+| `npm run deploy` | Builds and deploys the private site to Cloudflare |
+| `npm run deploy:demo` | Builds and deploys the separate public demo |
 | `npm run cf-typegen` | Regenerates Cloudflare types after a `wrangler.jsonc` change |
 | `npx vitest run` | Runs the tests |
 | `npx vitest run --coverage` | Runs the tests with coverage |
@@ -88,10 +101,12 @@ Without `APP_PASSWORD`, nobody can sign in. Without `API_KEY`, the API refuses e
 
 ## Using the API
 
+The API only runs on your own deployment, not on the public demo. Replace `YOUR-SITE` with your Worker's address.
+
 Add a card:
 
 ```bash
-curl -X POST "https://tanstack-demo.ask1846.workers.dev/api/tasks" \
+curl -X POST "https://YOUR-SITE.workers.dev/api/tasks" \
   -H "Authorization: Bearer YOUR_KEY" \
   -H "Content-Type: application/json" \
   -d '{"title":"Call the supplier","column":"In Progress","notes":"Ask about the March invoice"}'
@@ -100,7 +115,7 @@ curl -X POST "https://tanstack-demo.ask1846.workers.dev/api/tasks" \
 List completed cards:
 
 ```bash
-curl "https://tanstack-demo.ask1846.workers.dev/api/tasks?status=completed" -H "Authorization: Bearer YOUR_KEY"
+curl "https://YOUR-SITE.workers.dev/api/tasks?status=completed" -H "Authorization: Bearer YOUR_KEY"
 ```
 
 The [API reference](docs/API.md) covers every endpoint, filter and error.

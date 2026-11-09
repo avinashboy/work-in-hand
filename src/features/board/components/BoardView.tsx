@@ -7,6 +7,8 @@ import {
 } from '@dnd-kit/core'
 import { Link } from '@tanstack/react-router'
 import { LogoutButton } from '../../auth/components/LogoutButton'
+import { DemoBanner } from '../../demo/components/DemoBanner'
+import { IS_DEMO } from '../../demo/demo-config'
 import {
   createTaskId,
   type Board,
@@ -96,6 +98,7 @@ export function BoardView() {
 
   return (
     <main className="board-page">
+      {IS_DEMO ? <DemoBanner /> : null}
       <header className="masthead">
         <h1>Work in Hand</h1>
         <div className="masthead-meta">
@@ -111,7 +114,7 @@ export function BoardView() {
             History
           </Link>
           <ThemeSwitch />
-          <LogoutButton />
+          {IS_DEMO ? null : <LogoutButton />}
         </div>
       </header>
 

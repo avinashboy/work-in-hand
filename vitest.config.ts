@@ -12,6 +12,7 @@ export default defineConfig({
       include: [
         'src/features/board/board-*.ts',
         'src/features/api/*.ts',
+        'src/features/demo/*.ts',
         'src/features/auth/auth-gate.server.ts',
         'src/features/auth/login-attempts.server.ts',
         'src/features/auth/password-session.server.ts',
