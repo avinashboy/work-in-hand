@@ -97,7 +97,7 @@ export function BoardView() {
   const totalTasks = countTasks(board)
 
   return (
-    <main className="board-page">
+    <main className="board-page board-page-fit">
       {IS_DEMO ? <DemoBanner /> : null}
       <header className="masthead">
         <h1>Work in Hand</h1>

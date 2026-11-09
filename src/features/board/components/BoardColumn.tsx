@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import {
   SortableContext,
@@ -31,6 +32,22 @@ export function BoardColumn({
     data: { type: 'column' },
   })
   const headingId = `column-${column.id}`
+  const listRef = useRef<HTMLOListElement>(null)
+  const shouldRevealNewCard = useRef(false)
+  const cardCount = column.tasks.length
+
+  // New cards land at the bottom of the list, which may be scrolled out of view.
+  useEffect(() => {
+    const list = listRef.current
+    if (!shouldRevealNewCard.current || list === null) return
+    shouldRevealNewCard.current = false
+    list.scrollTop = list.scrollHeight
+  }, [cardCount])
+
+  function handleCreate(title: string) {
+    shouldRevealNewCard.current = true
+    onCreate(column.id, title)
+  }
 
   return (
     <section
@@ -49,7 +66,7 @@ export function BoardColumn({
         items={column.tasks.map(({ id }) => id)}
         strategy={verticalListSortingStrategy}
       >
-        <ol className="task-list">
+        <ol ref={listRef} className="task-list">
           {column.tasks.map((task) => (
             <TaskCard
               key={task.id}
@@ -70,7 +87,7 @@ export function BoardColumn({
 
       <AddTaskForm
         columnTitle={column.title}
-        onSubmit={(title) => onCreate(column.id, title)}
+        onSubmit={handleCreate}
       />
     </section>
   )

@@ -65,6 +65,15 @@ body {
   padding: clamp(1.25rem, 3vw, 3rem) clamp(1rem, 3vw, 3rem) 5rem;
 }
 
+/* The board fills the screen and each column scrolls inside it. */
+.board-page-fit {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-height: 34rem;
+  padding-bottom: clamp(0.5rem, 1.5vw, 1.25rem);
+}
+
 /* Masthead */
 
 .masthead {
@@ -167,6 +176,12 @@ body {
   padding-bottom: 0.75rem;
 }
 
+.board-page-fit .columns {
+  flex: 1;
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+}
+
 /* Snapping would pull the strip away from where a drag has scrolled it. */
 .columns[data-dragging='true'] {
   scroll-snap-type: none;
@@ -176,7 +191,7 @@ body {
   --accent: var(--slate);
   display: flex;
   flex-direction: column;
-  min-height: 62dvh;
+  min-height: 0;
   scroll-snap-align: start;
   border-top: 6px solid var(--accent);
   background: var(--paper-deep);
@@ -222,9 +237,19 @@ body {
   flex: 1;
   flex-direction: column;
   gap: 0.6rem;
+  min-height: 0;
   margin: 0;
   padding: 0.25rem 0.75rem 0.9rem;
   list-style: none;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-color: var(--rule) transparent;
+  scrollbar-width: thin;
+}
+
+/* A scrolling list would otherwise squash its cards to fit. */
+.task-list > * {
+  flex-shrink: 0;
 }
 
 .task-empty {
