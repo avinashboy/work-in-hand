@@ -3,7 +3,7 @@ import { env } from 'cloudflare:workers'
 import { handleTaskApi, isTaskApiRequest, parseApiKey } from './features/api/task-api.server'
 import { canSkipLogin, checkRequest } from './features/auth/auth-gate.server'
 import { parsePassword } from './features/auth/password-session.server'
-import { getBoardStore, getLoginAttempts } from './features/board/board-store.server'
+import { getLoginAttempts, getTaskApiStore } from './features/board/board-store.server'
 
 export { BoardStore } from './features/board/board-store.server'
 
@@ -15,7 +15,7 @@ export default {
         apiKey: parseApiKey(env),
         isWithinRateLimit: async (client) =>
           (await env.API_RATE_LIMITER.limit({ key: client })).success,
-        createTask: (input) => getBoardStore().createTask(input),
+        ...getTaskApiStore(),
       })
     }
 

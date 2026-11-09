@@ -29,6 +29,12 @@ function options(overrides: Partial<TaskApiOptions> = {}): TaskApiOptions {
     apiKey: API_KEY,
     isWithinRateLimit: vi.fn().mockResolvedValue(true),
     createTask: vi.fn(async (input) => createdTask(input)),
+    listTasks: vi.fn(),
+    findTask: vi.fn(),
+    summarizeTasks: vi.fn(),
+    updateTask: vi.fn(),
+    removeTask: vi.fn(),
+    archiveTask: vi.fn(),
     ...overrides,
   }
 }
@@ -130,13 +136,6 @@ describe('handleTaskApi: access', () => {
     expect(api.createTask).not.toHaveBeenCalled()
     consoleError.mockRestore()
   })
-
-  it('only accepts POST', async () => {
-    const response = await handleTaskApi(new Request(URL_), options())
-
-    expect(response.status).toBe(405)
-    expect(response.headers.get('allow')).toBe('POST')
-  })
 })
 
 describe('handleTaskApi: creating cards', () => {
@@ -161,7 +160,13 @@ describe('handleTaskApi: creating cards', () => {
         title: 'Call the bank',
         column: 'doing',
         notes: 'Ask about the fee',
+        status: 'ongoing',
+        archived: false,
+        archiveReason: null,
         createdAt: new Date(CREATED_AT).toISOString(),
+        movedAt: new Date(CREATED_AT).toISOString(),
+        doneAt: null,
+        archivedAt: null,
       },
       error: null,
     })
@@ -200,7 +205,7 @@ describe('handleTaskApi: creating cards', () => {
     expect(api.createTask).toHaveBeenCalledWith(expect.objectContaining({ columnId }))
   })
 
-  it.each(['done', 'Done', 'nowhere', ''])('refuses the column "%s"', async (column) => {
+  it.each(['done', 'Done', 'nowhere', '', 'constructor'])('refuses the column "%s"', async (column) => {
     const api = options()
 
     const { response, body } = await send(post({ title: 'x', column }), api)

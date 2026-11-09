@@ -11,7 +11,7 @@ export default defineConfig({
       reporter: ['text'],
       include: [
         'src/features/board/board-*.ts',
-        'src/features/api/task-api.server.ts',
+        'src/features/api/*.ts',
         'src/features/auth/auth-gate.server.ts',
         'src/features/auth/login-attempts.server.ts',
         'src/features/auth/password-session.server.ts',

@@ -15,6 +15,7 @@ import {
   type Task,
 } from './board-model'
 import { applyCommand, countTasks } from './board-reducer'
+import { createTaskOperations, type TaskOperations } from './board-task-operations.server'
 
 const NO_TASKS: Board = { columns: [] }
 
@@ -78,7 +79,7 @@ const archivedRowSchema = z.object({
 
 const countRowSchema = z.object({ total: z.number() })
 
-export interface BoardRepository {
+export interface BoardRepository extends TaskOperations {
   readonly get: () => Board
   readonly apply: (command: BoardCommand) => Board
   readonly listArchive: (page: number) => ArchivePage
@@ -320,25 +321,40 @@ export function createBoardRepository({
       return loadBoard(db)
     })
 
-  const apply = (command: BoardCommand): Board =>
-    db.transaction(() => {
-      const time = now()
-      archiveExpiredTasks(db, time)
-      const previous = loadBoard(db)
-      const next = applyCommand(previous, withServerTime(command, time))
-      if (command.type === 'create' && countTasks(next) > MAX_TASKS_ON_BOARD) {
-        throw new Error('Board is full')
-      }
-      saveTasks(db, next)
-      removeMissingTasks(db, previous, next, command, time)
-      saveChangedNotes(db, previous, next)
-      // Compared with what was really saved: an archived id can't be revived.
-      const saved = loadBoard(db)
-      recordMoves(db, previous, saved)
-      return saved
-    })
+  const applyChange = (command: BoardCommand): Board => {
+    const time = now()
+    archiveExpiredTasks(db, time)
+    const previous = loadBoard(db)
+    const next = applyCommand(previous, withServerTime(command, time))
+    if (command.type === 'create' && countTasks(next) > MAX_TASKS_ON_BOARD) {
+      throw new Error('Board is full')
+    }
+    saveTasks(db, next)
+    removeMissingTasks(db, previous, next, command, time)
+    saveChangedNotes(db, previous, next)
+    // Compared with what was really saved: an archived id can't be revived.
+    const saved = loadBoard(db)
+    recordMoves(db, previous, saved)
+    return saved
+  }
+
+  const apply = (command: BoardCommand): Board => db.transaction(() => applyChange(command))
+
+  const removeFromHistory = (taskId: string): void => {
+    const removed = db.run('DELETE FROM tasks WHERE id = ? AND archived_at IS NOT NULL', taskId)
+    if (removed === 0) return
+    db.run('DELETE FROM task_moves WHERE task_id = ?', taskId)
+    deleteNotes(db, taskId)
+  }
 
   return {
+    ...createTaskOperations({
+      db,
+      now,
+      sweepExpired: () => archiveExpiredTasks(db, now()),
+      applyChange,
+      removeFromHistory,
+    }),
     get,
     apply,
     createTask: ({ columnId, title, notes }) => {
@@ -354,15 +370,6 @@ export function createBoardRepository({
         archiveExpiredTasks(db, now())
         return readArchivePage(db, page)
       }),
-    deleteArchived: (taskId) =>
-      db.transaction(() => {
-        const removed = db.run(
-          'DELETE FROM tasks WHERE id = ? AND archived_at IS NOT NULL',
-          taskId,
-        )
-        if (removed === 0) return
-        db.run('DELETE FROM task_moves WHERE task_id = ?', taskId)
-        deleteNotes(db, taskId)
-      }),
+    deleteArchived: (taskId) => db.transaction(() => removeFromHistory(taskId)),
   }
 }
