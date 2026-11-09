@@ -1,0 +1,9 @@
+# Set on Cloudflare with `npx wrangler secret put <NAME>`.
+
+# The login password, at least 12 characters. `npm run dev` skips the login.
+# Without it, a deployed site lets nobody in.
+APP_PASSWORD=
+
+# The key outside apps send to POST /api/tasks, at least 32 characters.
+# Without it, every API call is refused.
+API_KEY=

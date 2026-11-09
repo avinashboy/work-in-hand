@@ -6,6 +6,7 @@ import { HistoryRow } from './HistoryRow'
 const task: ArchivedTask = {
   id: 't1',
   title: 'Ship the report',
+  notes: '',
   createdAt: 1_000_000,
   doneAt: 3_000_000,
   archivedAt: 4_000_000,
@@ -36,6 +37,17 @@ const deleteButton = () =>
 afterEach(() => {
   cleanup()
   onDelete.mockClear()
+})
+
+describe('HistoryRow: notes', () => {
+  it('shows the notes once the row is opened', () => {
+    const toggle = renderRow({ ...task, notes: 'Sent to finance' })
+
+    expect(screen.queryByText('Sent to finance')).toBeNull()
+    fireEvent.click(toggle)
+
+    expect(screen.getByText('Sent to finance')).toBeTruthy()
+  })
 })
 
 describe('HistoryRow: deleting', () => {

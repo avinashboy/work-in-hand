@@ -1,6 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
-import { requireSession } from '../features/auth/auth-guards'
 import { boardQueryOptions } from '../features/board/board-queries'
 import { BoardView } from '../features/board/components/BoardView'
 
@@ -10,7 +9,6 @@ const boardSearchSchema = z.object({
 
 export const Route = createFileRoute('/')({
   validateSearch: boardSearchSchema,
-  beforeLoad: requireSession,
   head: () => ({
     meta: [{ title: 'Work in Hand' }],
   }),

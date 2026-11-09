@@ -8,6 +8,7 @@ import { TaskCard } from './TaskCard'
 const doneTask: Task = {
   id: 't1',
   title: 'Ship the report',
+  notes: '',
   createdAt: 1000,
   movedAt: 2000,
   doneAt: 2000,
@@ -26,6 +27,7 @@ function renderCard(task: Task = doneTask) {
             isSaving={false}
             onDelete={vi.fn()}
             onConfirm={onConfirm}
+            onSaveNotes={vi.fn()}
           />
         </ul>
       </SortableContext>

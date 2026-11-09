@@ -7,6 +7,7 @@ const CREATED = 1000
 const task: ArchivedTask = {
   id: 't1',
   title: 'Task',
+  notes: '',
   createdAt: CREATED,
   doneAt: 4000,
   archivedAt: 5000,

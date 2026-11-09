@@ -3,6 +3,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { ARCHIVE_AFTER_MS, type ColumnId, type Task } from '../board-model'
 import { CardTime } from './CardTime'
 import { ArchiveIcon } from './icons'
+import { TaskNotes } from './TaskNotes'
 
 const TASK_CODE_LENGTH = 4
 
@@ -71,6 +72,7 @@ interface TaskCardProps {
   readonly isSaving: boolean
   readonly onDelete: (taskId: string) => void
   readonly onConfirm: (taskId: string) => void
+  readonly onSaveNotes: (taskId: string, notes: string) => void
 }
 
 export function TaskCard({
@@ -79,6 +81,7 @@ export function TaskCard({
   isSaving,
   onDelete,
   onConfirm,
+  onSaveNotes,
 }: TaskCardProps) {
   const {
     attributes,
@@ -108,6 +111,7 @@ export function TaskCard({
         <TaskHeading task={task} isSaving={isSaving} />
       </button>
       <TaskTimes task={task} dragListeners={listeners} />
+      <TaskNotes task={task} onSave={onSaveNotes} />
       <button
         type="button"
         className="task-delete"

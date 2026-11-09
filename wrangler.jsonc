@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tanstack-demo",
+  "compatibility_date": "2026-11-08",
+  "main": "src/server.ts",
+  "upload_source_maps": true,
+  "observability": {
+    "enabled": true
+  },
+  "ratelimits": [
+    {
+      "name": "API_RATE_LIMITER",
+      "namespace_id": "1001",
+      "simple": { "limit": 30, "period": 60 }
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "BOARD_STORE", "class_name": "BoardStore" }]
+  },
+  "exports": {
+    "BoardStore": { "type": "durable-object", "storage": "sqlite" }
+  }
+}

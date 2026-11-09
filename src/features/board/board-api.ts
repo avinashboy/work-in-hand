@@ -1,27 +1,27 @@
 import { createServerFn } from '@tanstack/react-start'
-import { requireSignedIn } from '../auth/auth-middleware'
 import {
   archivePageSchema,
   boardCommandSchema,
   taskIdSchema,
+  type ArchivePage,
+  type Board,
 } from './board-model'
-import { getBoardRepository } from './board-repository.server'
+import { getBoardStore } from './board-store.server'
 
-export const getBoard = createServerFn({ method: 'GET' })
-  .middleware([requireSignedIn])
-  .handler(() => getBoardRepository().get())
+// Requests only reach these once src/server.ts has checked the login session.
+// The return types are stated because RPC wraps them in its own serialised form.
+export const getBoard = createServerFn({ method: 'GET' }).handler(
+  (): Promise<Board> => getBoardStore().readBoard(),
+)
 
 export const applyBoardCommand = createServerFn({ method: 'POST' })
-  .middleware([requireSignedIn])
   .validator(boardCommandSchema)
-  .handler(({ data }) => getBoardRepository().apply(data))
+  .handler(({ data }): Promise<Board> => getBoardStore().applyCommand(data))
 
 export const getArchive = createServerFn({ method: 'GET' })
-  .middleware([requireSignedIn])
   .validator(archivePageSchema)
-  .handler(({ data }) => getBoardRepository().listArchive(data))
+  .handler(({ data }): Promise<ArchivePage> => getBoardStore().listArchive(data))
 
 export const deleteArchivedTask = createServerFn({ method: 'POST' })
-  .middleware([requireSignedIn])
   .validator(taskIdSchema)
-  .handler(({ data }) => getBoardRepository().deleteArchived(data))
+  .handler(({ data }): Promise<void> => getBoardStore().deleteArchived(data))

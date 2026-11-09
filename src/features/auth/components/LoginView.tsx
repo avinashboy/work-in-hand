@@ -1,47 +1,23 @@
-import { useState, type FormEvent } from 'react'
-import { useMutation } from '@tanstack/react-query'
 import { ThemeSwitch } from '../../board/components/ThemeSwitch'
-import { logIn } from '../auth-api'
 import {
   LOGIN_LOCK_MINUTES,
   MAX_PASSWORD_LENGTH,
-  type LoginStatus,
-} from '../auth-model'
+  MIN_PASSWORD_LENGTH,
+  type LoginError,
+} from '../login-model'
 
-const FAILURE_MESSAGES: Record<Exclude<LoginStatus, 'ok'>, string> = {
+const FAILURE_MESSAGES: Record<LoginError, string> = {
   invalid: 'That password isn’t right.',
   locked: `Too many tries. Wait ${LOGIN_LOCK_MINUTES} minutes, then try again.`,
-  unconfigured: 'No password has been set up on this server yet.',
+  setup: `No password has been set up yet, or it’s under ${MIN_PASSWORD_LENGTH} characters.`,
+  unavailable: 'Something went wrong on the server. Try again.',
 }
-const NETWORK_FAILURE = 'Couldn’t reach the server. Try again.'
 
-export function LoginView() {
-  const [password, setPassword] = useState('')
-  const login = useMutation({
-    mutationFn: (value: string) => logIn({ data: { password: value } }),
-    onSuccess: ({ status }) => {
-      if (status === 'ok') {
-        // A full load, so nothing from before signing in stays in memory.
-        window.location.assign('/')
-      } else {
-        setPassword('')
-      }
-    },
-  })
+interface LoginViewProps {
+  readonly error?: LoginError
+}
 
-  const isBusy = login.isPending || login.data?.status === 'ok'
-  const failure =
-    login.isError
-      ? NETWORK_FAILURE
-      : login.data && login.data.status !== 'ok'
-        ? FAILURE_MESSAGES[login.data.status]
-        : null
-
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    login.mutate(password)
-  }
-
+export function LoginView({ error }: LoginViewProps) {
   return (
     <main className="board-page">
       <header className="masthead">
@@ -51,7 +27,7 @@ export function LoginView() {
         </div>
       </header>
 
-      <form className="login-form" onSubmit={submit}>
+      <form className="login-form" method="post" action="/api/login">
         <h2>Private board</h2>
         <label htmlFor="login-password">Password</label>
         <input
@@ -62,14 +38,10 @@ export function LoginView() {
           autoFocus
           required
           maxLength={MAX_PASSWORD_LENGTH}
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
         />
-        <button type="submit" disabled={isBusy}>
-          {isBusy ? 'Checking…' : 'Log in'}
-        </button>
+        <button type="submit">Log in</button>
         <p className="login-error" role="alert">
-          {failure}
+          {error ? FAILURE_MESSAGES[error] : null}
         </p>
       </form>
     </main>

@@ -1,3 +1,4 @@
+import { cloudflare } from '@cloudflare/vite-plugin'
 import { defineConfig } from 'vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
@@ -14,10 +15,14 @@ const VITE_DEFAULT_FS_DENY = [
 
 export default defineConfig({
   server: {
-    // Database writes must not look like source changes to the dev server.
-    watch: { ignored: ['**/data/**'] },
-    // The dev server would otherwise hand the database file to any browser.
-    fs: { deny: [...VITE_DEFAULT_FS_DENY, '**/data/*.db*'] },
+    // The dev server would otherwise hand your data files to any browser.
+    fs: {
+      deny: [...VITE_DEFAULT_FS_DENY, '.dev.vars', '**/data/*.db*', '**/.wrangler/**'],
+    },
   },
-  plugins: [tanstackStart(), viteReact()],
+  plugins: [
+    cloudflare({ viteEnvironment: { name: 'ssr' } }),
+    tanstackStart(),
+    viteReact(),
+  ],
 })

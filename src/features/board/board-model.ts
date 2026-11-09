@@ -3,6 +3,7 @@ import { z } from 'zod'
 export const COLUMN_IDS = ['backlog', 'doing', 'review', 'done'] as const
 export const DONE_COLUMN_ID = 'done'
 export const MAX_TITLE_LENGTH = 120
+export const MAX_NOTES_LENGTH = 5000
 export const MAX_TASKS_ON_BOARD = 200
 export const ARCHIVE_AFTER_MS = 24 * 60 * 60 * 1000
 export const ARCHIVE_PAGE_SIZE = 25
@@ -31,6 +32,7 @@ export function createTaskId(): string {
 }
 
 export const taskTitleSchema = z.string().trim().min(1).max(MAX_TITLE_LENGTH)
+export const taskNotesSchema = z.string().max(MAX_NOTES_LENGTH)
 export const archivePageSchema = z.number().int().min(1).max(MAX_ARCHIVE_PAGE)
 
 /**
@@ -54,7 +56,13 @@ export const boardCommandSchema = z.discriminatedUnion('type', [
     taskId: taskIdSchema,
     columnId: columnIdSchema,
     title: taskTitleSchema,
+    notes: taskNotesSchema.optional(),
     at: timestampSchema,
+  }),
+  z.object({
+    type: z.literal('set-notes'),
+    taskId: taskIdSchema,
+    notes: taskNotesSchema,
   }),
   z.object({
     type: z.literal('delete'),
@@ -73,6 +81,7 @@ export type ArchiveReason = 'confirmed' | 'expired'
 export interface Task {
   readonly id: string
   readonly title: string
+  readonly notes: string
   readonly createdAt: number
   /** When it landed in its current column. Equals createdAt until it moves. */
   readonly movedAt: number
@@ -97,6 +106,7 @@ export interface Board {
 export interface ArchivedTask {
   readonly id: string
   readonly title: string
+  readonly notes: string
   readonly createdAt: number
   readonly doneAt: number
   readonly archivedAt: number
@@ -141,6 +151,7 @@ export function createSeedBoard(createdAt: number): Board {
       tasks: SEED_TASKS[id].map(([taskId, title]) => ({
         id: taskId,
         title,
+        notes: '',
         createdAt,
         movedAt: createdAt,
         doneAt: null,

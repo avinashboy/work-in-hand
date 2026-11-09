@@ -5,8 +5,10 @@
   "scripts": {
     "dev": "vite dev --port 3000",
     "build": "vite build",
-    "start": "srvx serve --prod --entry dist/server/server.js --static ../client",
-    "set-password": "node scripts/set-password.ts"
+    "preview": "vite preview",
+    "deploy": "npm run build && wrangler deploy",
+    "cf-typegen": "wrangler types",
+    "export-board": "node scripts/export-board.ts"
   },
   "engines": {
     "node": ">=24"
@@ -23,10 +25,10 @@
     "@tanstack/react-start": "^1.169.5",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "srvx": "^1.0.8",
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.67.0",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
     "@types/node": "^26.6.6",
@@ -37,6 +39,7 @@
     "jsdom": "^31.0.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.6",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "wrangler": "^4.158.0"
   }
 }

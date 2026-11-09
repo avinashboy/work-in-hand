@@ -1,6 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
-import { requireSession } from '../features/auth/auth-guards'
 import { archivePageSchema } from '../features/board/board-model'
 import { archiveQueryOptions } from '../features/board/board-queries'
 import { HistoryView } from '../features/board/components/HistoryView'
@@ -11,7 +10,6 @@ const historySearchSchema = z.object({
 
 export const Route = createFileRoute('/history')({
   validateSearch: historySearchSchema,
-  beforeLoad: requireSession,
   loaderDeps: ({ search }) => ({ page: search.page ?? 1 }),
   head: () => ({
     meta: [{ title: 'History' }],

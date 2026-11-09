@@ -81,6 +81,7 @@ export function HistoryRow({ task, isDeleting, onDelete }: HistoryRowProps) {
       {isOpen ? (
         <tr className="history-detail">
           <td id={panelId} colSpan={COLUMN_COUNT}>
+            {task.notes ? <p className="history-notes">{task.notes}</p> : null}
             <TaskTimelineList task={task} />
           </td>
         </tr>

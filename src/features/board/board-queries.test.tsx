@@ -19,8 +19,8 @@ interface Deferred {
 const { serverCalls, initialBoard } = vi.hoisted(() => {
   const board: Board = {
     columns: [
-      { id: 'backlog', title: 'Backlog', tasks: [{ id: 'a', title: 'A', createdAt: 1000, movedAt: 1000, doneAt: null }] },
-      { id: 'doing', title: 'Doing', tasks: [{ id: 'b', title: 'B', createdAt: 1000, movedAt: 1000, doneAt: null }] },
+      { id: 'backlog', title: 'Backlog', tasks: [{ id: 'a', title: 'A', notes: '', createdAt: 1000, movedAt: 1000, doneAt: null }] },
+      { id: 'doing', title: 'Doing', tasks: [{ id: 'b', title: 'B', notes: '', createdAt: 1000, movedAt: 1000, doneAt: null }] },
       { id: 'review', title: 'Review', tasks: [] },
       { id: 'done', title: 'Done', tasks: [] },
     ],
@@ -60,8 +60,8 @@ function boardAfterMoveA(): Board {
   return {
     columns: [
       { id: 'backlog', title: 'Backlog', tasks: [] },
-      { id: 'doing', title: 'Doing', tasks: [{ id: 'b', title: 'B', createdAt: 1000, movedAt: 1000, doneAt: null }] },
-      { id: 'review', title: 'Review', tasks: [{ id: 'a', title: 'A', createdAt: 1000, movedAt: 1000, doneAt: null }] },
+      { id: 'doing', title: 'Doing', tasks: [{ id: 'b', title: 'B', notes: '', createdAt: 1000, movedAt: 1000, doneAt: null }] },
+      { id: 'review', title: 'Review', tasks: [{ id: 'a', title: 'A', notes: '', createdAt: 1000, movedAt: 1000, doneAt: null }] },
       { id: 'done', title: 'Done', tasks: [] },
     ],
   }

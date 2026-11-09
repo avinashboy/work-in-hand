@@ -41,6 +41,17 @@ function withoutTask(board: Board, taskId: string): Board {
   }
 }
 
+function withNotes(board: Board, taskId: string, notes: string): Board {
+  return {
+    columns: board.columns.map((column) => ({
+      ...column,
+      tasks: column.tasks.map((task) =>
+        task.id === taskId ? { ...task, notes } : task,
+      ),
+    })),
+  }
+}
+
 function insertTaskAt(
   tasks: readonly Task[],
   task: Task,
@@ -91,12 +102,15 @@ export function applyCommand(board: Board, command: BoardCommand): Board {
           {
             id: command.taskId,
             title: command.title,
+            notes: command.notes ?? '',
             createdAt: command.at,
             movedAt: command.at,
             doneAt: command.columnId === DONE_COLUMN_ID ? command.at : null,
           },
         ],
       }))
+    case 'set-notes':
+      return existing ? withNotes(board, command.taskId, command.notes) : board
     case 'delete':
       return existing ? withoutTask(board, command.taskId) : board
     case 'archive':

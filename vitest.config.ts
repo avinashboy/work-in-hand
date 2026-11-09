@@ -11,11 +11,18 @@ export default defineConfig({
       reporter: ['text'],
       include: [
         'src/features/board/board-*.ts',
-        'src/features/auth/auth-model.ts',
-        'src/features/auth/auth-password.server.ts',
-        'src/features/auth/auth-service.server.ts',
+        'src/features/api/task-api.server.ts',
+        'src/features/auth/auth-gate.server.ts',
+        'src/features/auth/login-attempts.server.ts',
+        'src/features/auth/password-session.server.ts',
+        'src/lib/durable-object-sql.server.ts',
       ],
-      exclude: ['src/**/*.test.*'],
+      // These two only run inside Cloudflare's runtime and are thin wrappers.
+      exclude: [
+        'src/**/*.test.*',
+        'src/features/board/board-store.server.ts',
+        'src/features/board/board-api.ts',
+      ],
       thresholds: { lines: 80, functions: 80, branches: 80, statements: 80 },
     },
   },

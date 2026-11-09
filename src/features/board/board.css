@@ -307,6 +307,126 @@ body {
   -webkit-touch-callout: none;
 }
 
+.task-notes {
+  padding: 0 2rem 0.7rem 0.85rem;
+}
+
+/* Clamped to two lines: the full text lives in the notes dialog. */
+.task-notes-open {
+  display: -webkit-box;
+  overflow: hidden;
+  width: 100%;
+  padding: 0.35rem 0 0;
+  border: 0;
+  border-top: 1px dotted var(--ink-soft);
+  background: none;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  text-align: left;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  transition: color var(--duration-fast);
+}
+
+.task-notes-open[data-empty='true'] {
+  color: var(--ink-soft);
+}
+
+.task-notes-open:hover {
+  color: var(--vermilion);
+}
+
+.notes-dialog {
+  width: min(38rem, calc(100vw - 2rem));
+  padding: 1.25rem;
+  border: 0;
+  border-top: 6px solid var(--vermilion);
+  background: var(--paper-deep);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  box-shadow: var(--shadow-card-hover);
+}
+
+.notes-dialog::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+
+.notes-dialog h2 {
+  margin: 0 0 1rem;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-style: italic;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.notes-dialog label {
+  display: block;
+  margin-bottom: 0.4rem;
+  color: var(--ink-soft);
+}
+
+.notes-dialog textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--ink);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.notes-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+}
+
+.notes-actions button {
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--ink);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.notes-actions .notes-save {
+  background: var(--ink);
+  color: var(--card);
+  font-weight: 500;
+}
+
+.notes-actions .notes-save:hover {
+  border-color: var(--vermilion);
+  background: var(--vermilion);
+}
+
+.task-notes-open:focus-visible,
+.notes-dialog textarea:focus-visible,
+.notes-actions button:focus-visible {
+  outline: 2px solid var(--vermilion);
+  outline-offset: 2px;
+}
+
+.history-notes {
+  margin: 0 0 1rem;
+  max-width: 60ch;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .task-code {
   color: var(--ink-soft);
   font-family: var(--font-mono);
@@ -974,14 +1094,9 @@ body {
   transition: background-color var(--duration-fast), border-color var(--duration-fast);
 }
 
-.login-form button:hover:not(:disabled) {
+.login-form button:hover {
   border-color: var(--vermilion);
   background: var(--vermilion);
-}
-
-.login-form button:disabled {
-  opacity: 0.6;
-  cursor: progress;
 }
 
 .login-error {

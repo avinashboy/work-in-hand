@@ -2,9 +2,10 @@
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { openTestDatabase, type TestDatabase } from '../../lib/node-sql-database.testing'
 import { createBoardRepository } from './board-repository.server'
+import { boardSnapshotSchema, type BoardSnapshot } from './board-snapshot'
 import {
   ARCHIVE_AFTER_MS,
   ARCHIVE_PAGE_SIZE,
@@ -30,6 +31,7 @@ const emptyBoard: Board = {
 const sampleTask = {
   id: 's1',
   title: 'Sample',
+  notes: '',
   createdAt: START,
   movedAt: START,
   doneAt: null,
@@ -50,18 +52,20 @@ function idsIn(board: Board, columnId: ColumnId): string[] {
 
 describe('createBoardRepository', () => {
   let clock: number
+  let db: TestDatabase
   let repository: ReturnType<typeof createBoardRepository>
 
   beforeEach(() => {
     clock = START
+    db = openTestDatabase()
     repository = createBoardRepository({
-      path: ':memory:',
+      db,
       now: () => clock,
       seedBoard: emptyBoard,
     })
   })
 
-  afterEach(() => repository.close())
+  afterEach(() => db.close())
 
   it('stamps a new task with the server clock, not the client one', () => {
     const board = repository.apply(create('t1'))
@@ -397,6 +401,132 @@ describe('createBoardRepository', () => {
   })
 })
 
+describe('starting from an exported board', () => {
+  const snapshot: BoardSnapshot = {
+    tasks: [
+      {
+        id: 'second',
+        title: 'Second',
+        columnId: 'doing',
+        position: 1,
+        createdAt: START - 9000,
+        movedAt: START - 8000,
+        doneAt: null,
+        archivedAt: null,
+        archiveReason: null,
+      },
+      {
+        id: 'first',
+        title: 'First',
+        columnId: 'doing',
+        position: 0,
+        createdAt: START - 9000,
+        movedAt: START - 9000,
+        doneAt: null,
+        archivedAt: null,
+        archiveReason: null,
+      },
+      {
+        id: 'filed',
+        title: 'Filed',
+        columnId: 'done',
+        position: 0,
+        createdAt: START - 9000,
+        movedAt: START - 5000,
+        doneAt: START - 5000,
+        archivedAt: START - 1000,
+        archiveReason: 'confirmed',
+      },
+    ],
+    moves: [
+      { taskId: 'filed', columnId: 'backlog', at: START - 9000 },
+      { taskId: 'filed', columnId: 'done', at: START - 5000 },
+    ],
+  }
+
+  let db: TestDatabase
+
+  beforeEach(() => {
+    db = openTestDatabase()
+  })
+
+  afterEach(() => db.close())
+
+  function open() {
+    return createBoardRepository({
+      db,
+      now: () => START,
+      seedBoard: emptyBoard,
+      loadSnapshot: () => snapshot,
+    })
+  }
+
+  it('keeps cards on the board, in order, with their times', () => {
+    const board = open().get()
+
+    expect(idsIn(board, 'doing')).toEqual(['first', 'second'])
+    expect(board.columns[1].tasks[1]).toMatchObject({
+      createdAt: START - 9000,
+      movedAt: START - 8000,
+    })
+  })
+
+  it('keeps the history and each timeline', () => {
+    expect(open().listArchive(1).tasks[0]).toMatchObject({
+      id: 'filed',
+      archivedAt: START - 1000,
+      reason: 'confirmed',
+      moves: [
+        { columnId: 'backlog', at: START - 9000 },
+        { columnId: 'done', at: START - 5000 },
+      ],
+    })
+  })
+
+  it('is only ever imported once', () => {
+    open().deleteArchived('filed')
+
+    expect(open().listArchive(1).total).toBe(0)
+  })
+
+  it('is not even read once the board exists', () => {
+    open()
+
+    expect(() =>
+      createBoardRepository({
+        db,
+        now: () => START,
+        seedBoard: emptyBoard,
+        loadSnapshot: () => {
+          throw new Error('damaged export file')
+        },
+      }),
+    ).not.toThrow()
+  })
+
+  it('is used instead of the sample cards', () => {
+    const seeded = {
+      columns: emptyBoard.columns.map((column) =>
+        column.id === 'backlog' ? { ...column, tasks: [sampleTask] } : column,
+      ),
+    }
+
+    const board = createBoardRepository({
+      db,
+      now: () => START,
+      seedBoard: seeded,
+      loadSnapshot: () => snapshot,
+    }).get()
+
+    expect(idsIn(board, 'backlog')).toEqual([])
+  })
+
+  it('accepts a real export and refuses a damaged one', () => {
+    expect(boardSnapshotSchema.safeParse(snapshot).success).toBe(true)
+    expect(boardSnapshotSchema.safeParse({ tasks: [{ id: 'x' }], moves: [] }).success).toBe(false)
+  })
+})
+
 describe('database file', () => {
   let directory: string
 
@@ -407,11 +537,11 @@ describe('database file', () => {
   afterEach(() => rmSync(directory, { recursive: true, force: true }))
 
   function open(seedBoard: Board = emptyBoard) {
-    return createBoardRepository({
-      path: join(directory, 'nested', 'board.db'),
-      now: () => START,
-      seedBoard,
-    })
+    const db = openTestDatabase(join(directory, 'board.db'))
+    return {
+      ...createBoardRepository({ db, now: () => START, seedBoard }),
+      close: db.close,
+    }
   }
 
   it('keeps data after the database is reopened', () => {
@@ -461,76 +591,5 @@ describe('database file', () => {
       at: START,
     })
     repository.close()
-  })
-
-  describe('upgrading a database from before moves were recorded', () => {
-    const CREATED = START - 9000
-    const DONE = START - 5000
-    const ARCHIVED = START - 1000
-
-    function openUpgraded() {
-      const path = join(directory, 'old.db')
-      const old = new DatabaseSync(path)
-      old.exec(`
-        CREATE TABLE tasks (
-          id TEXT PRIMARY KEY,
-          title TEXT NOT NULL,
-          column_id TEXT NOT NULL,
-          position INTEGER NOT NULL,
-          created_at INTEGER NOT NULL,
-          done_at INTEGER,
-          archived_at INTEGER,
-          archive_reason TEXT CHECK (archive_reason IN ('confirmed', 'expired'))
-        );
-        CREATE INDEX tasks_by_archive_time ON tasks (archived_at);
-        INSERT INTO tasks VALUES ('active', 'Active', 'doing', 0, ${CREATED}, NULL, NULL, NULL);
-        INSERT INTO tasks VALUES ('finished', 'Finished', 'done', 0, ${CREATED}, ${DONE}, NULL, NULL);
-        INSERT INTO tasks VALUES ('filed', 'Filed', 'done', 1, ${CREATED}, ${DONE}, ${ARCHIVED}, 'confirmed');
-        PRAGMA user_version = 1;
-      `)
-      old.close()
-      return createBoardRepository({ path, now: () => START, seedBoard: emptyBoard })
-    }
-
-    it('keeps every card', () => {
-      const repository = openUpgraded()
-
-      expect(idsIn(repository.get(), 'doing')).toEqual(['active'])
-      expect(idsIn(repository.get(), 'done')).toEqual(['finished'])
-      expect(repository.listArchive(1).tasks.map(({ id }) => id)).toEqual(['filed'])
-      repository.close()
-    })
-
-    it('does not invent a move time for a card in the middle of the board', () => {
-      const repository = openUpgraded()
-
-      expect(repository.get().columns[1].tasks[0].movedAt).toBe(CREATED)
-      repository.close()
-    })
-
-    it('uses the done time it already knows', () => {
-      const repository = openUpgraded()
-
-      expect(repository.get().columns[3].tasks[0].movedAt).toBe(DONE)
-      expect(repository.listArchive(1).tasks[0].moves).toEqual([
-        { columnId: 'done', at: DONE },
-      ])
-      repository.close()
-    })
-
-    it('records new moves from then on, and survives reopening', () => {
-      const repository = openUpgraded()
-      repository.apply({ type: 'move', taskId: 'active', toColumnId: 'review', toIndex: 0, at: CLIENT_CLOCK })
-      repository.close()
-
-      const reopened = createBoardRepository({
-        path: join(directory, 'old.db'),
-        now: () => START,
-        seedBoard: emptyBoard,
-      })
-
-      expect(reopened.get().columns[2].tasks[0].movedAt).toBe(START)
-      reopened.close()
-    })
   })
 })
