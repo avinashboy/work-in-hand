@@ -1,6 +1,7 @@
 import {
   COLUMN_TITLES,
   DONE_COLUMN_ID,
+  type ArchiveActor,
   type ArchiveReason,
   type ArchivedTask,
   type ColumnId,
@@ -11,6 +12,19 @@ import {
 export const ARCHIVE_REASON_LABELS: Readonly<Record<ArchiveReason, string>> = {
   confirmed: 'Archive pressed',
   expired: 'After 24 hours',
+}
+
+const ACTOR_LABELS: Readonly<Record<ArchiveActor['kind'], string>> = {
+  board: 'Archive pressed',
+  api: 'Through the API',
+  agent: 'By an AI agent',
+}
+
+/** How a card reached History, naming the app or agent when it is known. Shown in the How column and the timeline. */
+export function describeArchive({ reason, archivedBy }: Pick<ArchivedTask, 'reason' | 'archivedBy'>): string {
+  if (reason === 'expired' || archivedBy === null) return ARCHIVE_REASON_LABELS[reason]
+  const label = ACTOR_LABELS[archivedBy.kind]
+  return archivedBy.client === null || archivedBy.kind === 'board' ? label : `${label}: ${archivedBy.client}`
 }
 
 const EDIT_LABELS: Readonly<Record<TaskEditKind, string>> = {
@@ -72,7 +86,7 @@ export function buildTimeline(task: ArchivedTask): TaskTimeline {
   )
   const filed: TimelineStep = {
     label: 'Moved to history',
-    detail: ARCHIVE_REASON_LABELS[task.reason],
+    detail: describeArchive(task),
     at: task.archivedAt,
     tone: 'history',
   }

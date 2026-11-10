@@ -11,6 +11,7 @@ const task: ArchivedTask = {
   doneAt: 3_000_000,
   archivedAt: 4_000_000,
   reason: 'expired',
+  archivedBy: null,
   moves: [
     { columnId: 'backlog', at: 1_000_000 },
     { columnId: 'doing', at: 2_000_000 },

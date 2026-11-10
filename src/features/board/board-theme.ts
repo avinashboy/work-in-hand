@@ -1,3 +1,5 @@
+import { BOARD_LOGO_DATA_URLS } from '../brand/board-logo'
+
 export const THEME_IDS = ['light', 'dark'] as const
 
 export type Theme = (typeof THEME_IDS)[number]
@@ -17,7 +19,15 @@ export const THEME_INIT_SCRIPT = `(function () {
     theme = matchMedia(${JSON.stringify(DARK_SCHEME_QUERY)}).matches ? 'dark' : 'light';
   }
   document.documentElement.dataset.theme = theme;
+  var icons = ${JSON.stringify(BOARD_LOGO_DATA_URLS)};
+  var icon = document.querySelector('link[rel="icon"]');
+  if (icon) icon.setAttribute('href', icons[theme]);
 })();`
+
+/** The tab icon is rendered light in <head>; this keeps it on the page's theme. */
+function applyTabIcon(theme: Theme): void {
+  document.querySelector('link[rel="icon"]')?.setAttribute('href', BOARD_LOGO_DATA_URLS[theme])
+}
 
 function parseTheme(value: string | null | undefined): Theme | null {
   return THEME_IDS.find((id) => id === value) ?? null
@@ -37,6 +47,7 @@ function getSystemTheme(): Theme {
 
 function applyTheme(theme: Theme): void {
   document.documentElement.dataset.theme = theme
+  applyTabIcon(theme)
   window.dispatchEvent(new Event(THEME_CHANGE_EVENT))
 }
 

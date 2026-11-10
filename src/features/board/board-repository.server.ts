@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import type { SqlDatabase } from '../../lib/sql-database'
+import type { SqlDatabase, SqlValue } from '../../lib/sql-database'
+import { NO_HISTORY_FILTER, resolveHistoryBounds, type HistoryFilter } from './history-filter'
 import {
   ARCHIVE_AFTER_MS,
   ARCHIVE_PAGE_SIZE,
@@ -7,13 +8,25 @@ import {
   COLUMN_TITLES,
   DONE_COLUMN_ID,
   MAX_TASKS_ON_BOARD,
+  BOARD_ARCHIVE_ACTOR,
   createTaskId,
+  type ArchiveActor,
   type ArchivePage,
+  type ArchivePageSize,
   type Board,
   type BoardCommand,
   type ColumnId,
   type Task,
 } from './board-model'
+import {
+  ARCHIVE_ACTORS_SCHEMA,
+  JOIN_ARCHIVE_ACTORS,
+  SELECT_ARCHIVE_ACTOR,
+  archiveActorColumns,
+  deleteArchiveActor,
+  recordArchiveActor,
+  toArchiveActor,
+} from './board-archive-actors.server'
 import { EDITS_SCHEMA, deleteEdits, readEdits, recordEdits } from './board-edits.server'
 import { applyCommand, countTasks } from './board-reducer'
 import { createTaskOperations, type TaskOperations } from './board-task-operations.server'
@@ -76,14 +89,16 @@ const archivedRowSchema = z.object({
   done_at: z.number(),
   archived_at: z.number(),
   archive_reason: z.enum(['confirmed', 'expired']),
+  ...archiveActorColumns,
 })
 
 const countRowSchema = z.object({ total: z.number() })
 
 export interface BoardRepository extends TaskOperations {
   readonly get: () => Board
-  readonly apply: (command: BoardCommand) => Board
-  readonly listArchive: (page: number) => ArchivePage
+  /** `actor` is recorded when the command moves a card to History; the board's button by default. */
+  readonly apply: (command: BoardCommand, actor?: ArchiveActor) => Board
+  readonly listArchive: (page: number, filter?: HistoryFilter, pageSize?: ArchivePageSize) => ArchivePage
   /** Only ever touches finished cards: one still on the board is left alone. */
   readonly deleteArchived: (taskId: string) => void
   /** Returns the new card, or null when the board is full. */
@@ -177,6 +192,7 @@ function setUpSchema(db: SqlDatabase, seedBoard: Board): void {
   db.transaction(() => {
     db.script(NOTES_SCHEMA)
     db.script(EDITS_SCHEMA)
+    db.script(ARCHIVE_ACTORS_SCHEMA)
     const isNewDatabase =
       db.query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'tasks'")
         .length === 0
@@ -242,6 +258,7 @@ function removeMissingTasks(
   next: Board,
   command: BoardCommand,
   now: number,
+  actor: ArchiveActor,
 ): void {
   const remaining = new Set(taskIds(next))
   const remove =
@@ -253,11 +270,13 @@ function removeMissingTasks(
             now,
             id,
           )
+          recordArchiveActor(db, id, actor)
         }
       : (id: string) => {
           db.run('DELETE FROM task_moves WHERE task_id = ?', id)
           deleteEdits(db, id)
           deleteNotes(db, id)
+          deleteArchiveActor(db, id)
           db.run('DELETE FROM tasks WHERE id = ?', id)
         }
 
@@ -277,21 +296,46 @@ function readMoves(db: SqlDatabase, taskIds: readonly string[]) {
     .map((row) => moveRowSchema.parse(row))
 }
 
-function readArchivePage(db: SqlDatabase, requestedPage: number): ArchivePage {
+/** History's filter as SQL. Every value is a bound parameter. */
+function archiveWhere(filter: HistoryFilter, now: number): { sql: string; params: SqlValue[] } {
+  const { after, before } = resolveHistoryBounds(filter, now)
+  const search = filter.search.trim()
+  // % and _ are wildcards in LIKE, so they are escaped to match themselves.
+  const pattern = `%${search.replace(/[\\%_]/g, '\\$&')}%`
+  const clauses: readonly (readonly [string, SqlValue])[] = [
+    ...(search ? [[`t.title LIKE ? ESCAPE '\\'`, pattern] as const] : []),
+    ...(after === null ? [] : [['t.archived_at >= ?', after] as const]),
+    ...(before === null ? [] : [['t.archived_at <= ?', before] as const]),
+  ]
+  return {
+    sql: ['t.archived_at IS NOT NULL', ...clauses.map(([sql]) => sql)].join(' AND '),
+    params: clauses.map(([, param]) => param),
+  }
+}
+
+function readArchivePage(
+  db: SqlDatabase,
+  requestedPage: number,
+  filter: HistoryFilter,
+  now: number,
+  pageSize: ArchivePageSize,
+): ArchivePage {
+  const where = archiveWhere(filter, now)
   const { total } = countRowSchema.parse(
-    db.query('SELECT COUNT(*) AS total FROM tasks WHERE archived_at IS NOT NULL')[0],
+    db.query(`SELECT COUNT(*) AS total FROM tasks t WHERE ${where.sql}`, ...where.params)[0],
   )
-  const pageCount = Math.max(1, Math.ceil(total / ARCHIVE_PAGE_SIZE))
+  const pageCount = Math.max(1, Math.ceil(total / pageSize))
   const page = Math.min(requestedPage, pageCount)
   const rows = db
     .query(
       `SELECT t.id, t.title, COALESCE(n.notes, '') AS notes, t.created_at,
-              t.done_at, t.archived_at, t.archive_reason
-       FROM tasks t LEFT JOIN task_notes n ON n.task_id = t.id
-       WHERE t.archived_at IS NOT NULL
+              t.done_at, t.archived_at, t.archive_reason, ${SELECT_ARCHIVE_ACTOR}
+       FROM tasks t LEFT JOIN task_notes n ON n.task_id = t.id ${JOIN_ARCHIVE_ACTORS}
+       WHERE ${where.sql}
        ORDER BY t.archived_at DESC, t.id DESC LIMIT ? OFFSET ?`,
-      ARCHIVE_PAGE_SIZE,
-      (page - 1) * ARCHIVE_PAGE_SIZE,
+      ...where.params,
+      pageSize,
+      (page - 1) * pageSize,
     )
     .map((row) => archivedRowSchema.parse(row))
   const ids = rows.map(({ id }) => id)
@@ -305,13 +349,14 @@ function readArchivePage(db: SqlDatabase, requestedPage: number): ArchivePage {
     doneAt: row.done_at,
     archivedAt: row.archived_at,
     reason: row.archive_reason,
+    archivedBy: toArchiveActor(row),
     moves: moves
       .filter((move) => move.task_id === row.id)
       .map(({ column_id: columnId, at }) => ({ columnId, at })),
     edits: edits.get(row.id) ?? [],
   }))
 
-  return { tasks, page, pageCount, total }
+  return { tasks, page, pageSize, pageCount, total }
 }
 
 /** All board storage. Creates any missing tables, so call it once at start-up. */
@@ -328,7 +373,7 @@ export function createBoardRepository({
       return loadBoard(db)
     })
 
-  const applyChange = (command: BoardCommand): Board => {
+  const applyChange = (command: BoardCommand, actor: ArchiveActor = BOARD_ARCHIVE_ACTOR): Board => {
     const time = now()
     archiveExpiredTasks(db, time)
     const previous = loadBoard(db)
@@ -337,7 +382,7 @@ export function createBoardRepository({
       throw new Error('Board is full')
     }
     saveTasks(db, next)
-    removeMissingTasks(db, previous, next, command, time)
+    removeMissingTasks(db, previous, next, command, time, actor)
     saveChangedNotes(db, previous, next)
     // Compared with what was really saved: an archived id can't be revived.
     const saved = loadBoard(db)
@@ -346,7 +391,8 @@ export function createBoardRepository({
     return saved
   }
 
-  const apply = (command: BoardCommand): Board => db.transaction(() => applyChange(command))
+  const apply = (command: BoardCommand, actor: ArchiveActor = BOARD_ARCHIVE_ACTOR): Board =>
+    db.transaction(() => applyChange(command, actor))
 
   const removeFromHistory = (taskId: string): void => {
     const removed = db.run('DELETE FROM tasks WHERE id = ? AND archived_at IS NOT NULL', taskId)
@@ -354,6 +400,7 @@ export function createBoardRepository({
     db.run('DELETE FROM task_moves WHERE task_id = ?', taskId)
     deleteEdits(db, taskId)
     deleteNotes(db, taskId)
+    deleteArchiveActor(db, taskId)
   }
 
   return {
@@ -374,10 +421,11 @@ export function createBoardRepository({
         board.columns.flatMap(({ tasks }) => tasks).find(({ id }) => id === taskId) ?? null
       )
     },
-    listArchive: (page) =>
+    listArchive: (page, filter = NO_HISTORY_FILTER, pageSize = ARCHIVE_PAGE_SIZE) =>
       db.transaction(() => {
-        archiveExpiredTasks(db, now())
-        return readArchivePage(db, page)
+        const time = now()
+        archiveExpiredTasks(db, time)
+        return readArchivePage(db, page, filter, time, pageSize)
       }),
     deleteArchived: (taskId) => db.transaction(() => removeFromHistory(taskId)),
   }

@@ -3,6 +3,7 @@ import { isBodyWithinLimit } from '../auth/request-limits'
 import { fail } from '../api/task-api-response'
 import type { TaskApiStore } from '../api/task-api-routes.server'
 import { checkApiAccess, refuseIfOverLimit, type ApiAccessOptions } from '../api/task-api.server'
+import { clientNameFromUrl } from './mcp-client-name'
 import { MCP_PATH } from './mcp-path'
 import { createBoardMcpServer } from './mcp-server'
 
@@ -31,7 +32,11 @@ export async function handleMcpRequest(
       if (!(await isBodyWithinLimit(request))) return fail(413, 'Request too large')
     }
 
-    const handler = createMcpHandler(() => createBoardMcpServer(options.store), { route: MCP_PATH })
+    const hints = {
+      requested: clientNameFromUrl(request.url),
+      userAgent: request.headers.get('user-agent'),
+    }
+    const handler = createMcpHandler(() => createBoardMcpServer(options.store, hints), { route: MCP_PATH })
     return await handler(request, undefined, context)
   } catch (error) {
     console.error('Could not process the MCP request:', error)

@@ -11,6 +11,8 @@ Your board has a [Model Context Protocol](https://modelcontextprotocol.io) serve
 
 It runs only on your own deployment. The public demo has no MCP server.
 
+The server introduces itself as **Work in Hand**, with a small board logo. Clients that show server icons display it. It's the dark version of the site's tab icon, which follows the light or dark theme. To change the logo, edit `src/features/brand/board-logo.ts`.
+
 > [!WARNING]
 > Anyone with the key can read, change and delete every card. Keep it out of shared files, chats and screenshots. To revoke it, set a new one with `npx wrangler secret put API_KEY`. That cuts off the REST API and every connected agent until they get the new key.
 
@@ -33,6 +35,12 @@ Each tool tells the agent whether it only reads, changes or deletes, so a client
 
 Each tool call is its own request, so one agent conversation can use several of the 30 requests a minute. If an agent sees "Too many requests", it should wait a minute.
 
+## Who did it, in History
+
+When an agent moves a card to History, the **How** column and the card's timeline say which agent did it, for example "By an AI agent: Claude Desktop". Cards filed with the board's button say "Archive pressed", apps on the REST API say "Through the API", and cards filed automatically say "After 24 hours".
+
+Many clients don't say who they are on each call, so name the client in the address with `?client=`, as in the examples below. Known names become friendly ones: `claude-desktop`, `claude-code`, `cursor`, `vscode`, `chatgpt`, `windsurf`. Any other name is kept as plain text, up to 40 characters. Without it, History says "By an AI agent", unless the client names itself.
+
 ## Connecting a client
 
 Replace `YOUR-SITE` with your Worker's address and `YOUR_KEY` with your API key.
@@ -40,7 +48,7 @@ Replace `YOUR-SITE` with your Worker's address and `YOUR_KEY` with your API key.
 ### Claude Code
 
 ```bash
-claude mcp add --scope user --transport http work-in-hand https://YOUR-SITE.workers.dev/mcp --header "Authorization: Bearer YOUR_KEY"
+claude mcp add --scope user --transport http work-in-hand "https://YOUR-SITE.workers.dev/mcp?client=claude-code" --header "Authorization: Bearer YOUR_KEY"
 ```
 
 `--scope user` keeps the key in your own settings, not in a project file. The command also lands in your shell history, so clear that line afterwards if others use the computer.
@@ -53,7 +61,7 @@ Set the key as an environment variable named `WORK_IN_HAND_KEY`, then in `~/.cur
 {
   "mcpServers": {
     "work-in-hand": {
-      "url": "https://YOUR-SITE.workers.dev/mcp",
+      "url": "https://YOUR-SITE.workers.dev/mcp?client=cursor",
       "headers": { "Authorization": "Bearer ${env:WORK_IN_HAND_KEY}" }
     }
   }
@@ -74,7 +82,7 @@ In `.vscode/mcp.json`. VS Code asks for the key once and stores it securely, so 
   "servers": {
     "work-in-hand": {
       "type": "http",
-      "url": "https://YOUR-SITE.workers.dev/mcp",
+      "url": "https://YOUR-SITE.workers.dev/mcp?client=vscode",
       "headers": { "Authorization": "Bearer ${input:work-in-hand-key}" }
     }
   }
@@ -90,7 +98,7 @@ Claude Desktop's connectors don't take a custom key yet, so go through the small
   "mcpServers": {
     "work-in-hand": {
       "command": "npx",
-      "args": ["-y", "mcp-remote", "https://YOUR-SITE.workers.dev/mcp", "--header", "Authorization:${AUTH_HEADER}"],
+      "args": ["-y", "mcp-remote", "https://YOUR-SITE.workers.dev/mcp?client=claude-desktop", "--header", "Authorization:${AUTH_HEADER}"],
       "env": { "AUTH_HEADER": "Bearer YOUR_KEY" }
     }
   }

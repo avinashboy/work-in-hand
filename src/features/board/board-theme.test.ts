@@ -6,6 +6,7 @@ import {
   getTheme,
   subscribeToTheme,
 } from './board-theme'
+import { BOARD_LOGO_DATA_URLS } from '../brand/board-logo'
 
 const STORAGE_KEY = 'board-theme'
 
@@ -42,9 +43,14 @@ function pageTheme() {
   return document.documentElement.dataset.theme
 }
 
+function tabIcon() {
+  return document.querySelector<HTMLLinkElement>('link[rel="icon"]')?.getAttribute('href')
+}
+
 beforeEach(() => {
   window.localStorage.clear()
   delete document.documentElement.dataset.theme
+  document.head.innerHTML = `<link rel="icon" href="${BOARD_LOGO_DATA_URLS.light}">`
 })
 
 afterEach(() => {
@@ -77,6 +83,22 @@ describe('script that runs before the first paint', () => {
     runInitScript()
 
     expect(pageTheme()).toBe('light')
+  })
+
+  it('shows the dark tab icon on a dark page', () => {
+    stubSystemTheme('dark')
+
+    runInitScript()
+
+    expect(tabIcon()).toBe(BOARD_LOGO_DATA_URLS.dark)
+  })
+
+  it('keeps the light tab icon on a light page', () => {
+    stubSystemTheme('light')
+
+    runInitScript()
+
+    expect(tabIcon()).toBe(BOARD_LOGO_DATA_URLS.light)
   })
 
   it('still sets a theme when storage is blocked', () => {
@@ -118,6 +140,16 @@ describe('chooseTheme', () => {
 
     expect(pageTheme()).toBe('dark')
     expect(window.localStorage.getItem(STORAGE_KEY)).toBe('dark')
+  })
+
+  it('switches the tab icon with the theme, both ways', () => {
+    stubSystemTheme('light')
+
+    chooseTheme('dark')
+    expect(tabIcon()).toBe(BOARD_LOGO_DATA_URLS.dark)
+
+    chooseTheme('light')
+    expect(tabIcon()).toBe(BOARD_LOGO_DATA_URLS.light)
   })
 
   it('still changes the page when storage is blocked', () => {

@@ -3,7 +3,7 @@ import { env } from 'cloudflare:workers'
 import { handleTaskApi, isTaskApiRequest, parseApiKey } from './features/api/task-api.server'
 import { canSkipLogin, checkRequest } from './features/auth/auth-gate.server'
 import { parsePassword } from './features/auth/password-session.server'
-import { getLoginAttempts, getTaskApiStore } from './features/board/board-store.server'
+import { getBoardStore, getLoginAttempts, getTaskApiStore } from './features/board/board-store.server'
 import { IS_DEMO } from './features/demo/demo-config'
 import { checkDemoRequest } from './features/demo/demo-gate.server'
 import { isMcpRequest } from './features/mcp/mcp-path'
@@ -47,6 +47,17 @@ export default {
       return handleTaskApi(request, { ...apiAccess(), ...getTaskApiStore() })
     }
     if (isMcpRequest(request)) return handleMcp(request, context)
+
+    if (import.meta.env.DEV) {
+      const mock = await import('./features/dev/dev-routes.server')
+      if (mock.isMockHistoryRequest(request)) {
+        const store = getBoardStore()
+        return mock.handleMockHistoryRequest(request, {
+          add: () => store.changeMockHistory('add'),
+          remove: () => store.changeMockHistory('remove'),
+        })
+      }
+    }
 
     if (canSkipLogin(import.meta.env.DEV, request)) return handler.fetch(request)
 

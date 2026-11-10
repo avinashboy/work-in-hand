@@ -4,13 +4,13 @@ import { IS_DEMO } from '../demo/demo-config'
 import { visitorMiddleware } from '../demo/visitor-middleware'
 import type { VisitorFingerprint } from '../demo/visitor-model'
 import {
-  archivePageSchema,
   boardCommandSchema,
   taskIdSchema,
   type ArchivePage,
   type BoardSnapshot,
 } from './board-model'
 import { getBoardStore, type DemoVisitor } from './board-store.server'
+import { archiveQuerySchema } from './history-filter'
 
 /** Who sent this request, for the demo's visitor log. The user agent is read here, not trusted from the page. */
 function demoVisitor(fingerprint: VisitorFingerprint | null): DemoVisitor {
@@ -32,8 +32,8 @@ export const applyBoardCommand = createServerFn({ method: 'POST' })
   )
 
 export const getArchive = createServerFn({ method: 'GET' })
-  .validator(archivePageSchema)
-  .handler(({ data }): Promise<ArchivePage> => getBoardStore().listArchive(data))
+  .validator(archiveQuerySchema)
+  .handler(({ data }): Promise<ArchivePage> => getBoardStore().listArchive(data.page, data.filter, data.pageSize))
 
 export const deleteArchivedTask = createServerFn({ method: 'POST' })
   .middleware([visitorMiddleware])

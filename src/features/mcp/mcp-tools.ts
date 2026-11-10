@@ -85,7 +85,8 @@ function toListQuery({ columns, archived, ...rest }: ListTasksInput) {
   })
 }
 
-export function createBoardToolHandlers(store: TaskApiStore): BoardToolHandlers {
+/** `agentName` is the connected agent, such as "Claude Desktop", recorded when it moves a card to History. */
+export function createBoardToolHandlers(store: TaskApiStore, agentName: string | null = null): BoardToolHandlers {
   return {
     list_tasks: guarded('list_tasks', async (input) => {
       const query = check(listTasksQuerySchema, toListQuery(input))
@@ -108,7 +109,7 @@ export function createBoardToolHandlers(store: TaskApiStore): BoardToolHandlers 
       const columnId = body.data.column ?? 'backlog'
       const task = await store.createTask({ title: body.data.title, notes: body.data.notes, columnId })
       if (!task) return refuse('The board is full')
-      return ok(toApiTask({ ...task, columnId, archivedAt: null, archiveReason: null }))
+      return ok(toApiTask({ ...task, columnId, archivedAt: null, archiveReason: null, archivedBy: null }))
     }),
 
     update_task: guarded('update_task', async ({ taskId, ...fields }) => {
@@ -119,7 +120,9 @@ export function createBoardToolHandlers(store: TaskApiStore): BoardToolHandlers 
       return respondToChange(await store.updateTask(id.data, patch.data))
     }),
 
-    archive_task: withTaskId('archive_task', async (taskId) => respondToChange(await store.archiveTask(taskId))),
+    archive_task: withTaskId('archive_task', async (taskId) =>
+      respondToChange(await store.archiveTask(taskId, { kind: 'agent', client: agentName })),
+    ),
 
     delete_task: withTaskId('delete_task', async (taskId) =>
       (await store.removeTask(taskId)) ? ok({ id: taskId, deleted: true }) : refuse(NO_SUCH_CARD),

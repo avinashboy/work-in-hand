@@ -1,10 +1,15 @@
-import { McpServer, type CallToolResult } from '@modelcontextprotocol/server'
+import { CLIENT_INFO_META_KEY, McpServer, type CallToolResult } from '@modelcontextprotocol/server'
+import { z } from 'zod'
 import type { TaskApiStore } from '../api/task-api-routes.server'
+import { resolveAgentName, type AgentNameHints } from './mcp-client-name'
+import { MCP_LOGO_ICON } from './mcp-logo'
 import { createTaskInput, listTasksInput, taskIdInput, updateTaskInput } from './mcp-schemas'
 import { createBoardToolHandlers, type BoardToolResult } from './mcp-tools'
 
 export const MCP_SERVER_NAME = 'work-in-hand'
 export const MCP_SERVER_VERSION = '1.0.0'
+/** What clients show next to the logo. */
+export const MCP_SERVER_TITLE = 'Work in Hand'
 
 const INSTRUCTIONS = `Work in Hand is a private Kanban board with four columns: Backlog, In progress, In review and Done.
 Done cards move to History after 24 hours, or straight away with archive_task. Cards in History can be read and deleted but not changed.
@@ -22,13 +27,39 @@ function asResult(result: BoardToolResult): CallToolResult {
   return { ...result, content: [...result.content] }
 }
 
-/** A fresh server per request: the handler is stateless, so nothing is shared between calls. */
-export function createBoardMcpServer(store: TaskApiStore): McpServer {
+const clientInfoSchema = z.object({ name: z.string().optional(), title: z.string().optional() })
+
+/**
+ * Newer clients (protocol 2026-07-28) describe themselves on every request.
+ * The SDK leaves this envelope untyped, so it is checked here before use.
+ */
+function envelopeClientInfo(context: unknown): z.infer<typeof clientInfoSchema> | null {
+  const envelope = (context as { mcpReq?: { envelope?: Record<string, unknown> } } | undefined)?.mcpReq
+    ?.envelope
+  const parsed = clientInfoSchema.safeParse(envelope?.[CLIENT_INFO_META_KEY])
+  return parsed.success ? parsed.data : null
+}
+
+/**
+ * A fresh server per request: the handler is stateless, so nothing is shared
+ * between calls. `hints` help name the agent in the card's History timeline.
+ */
+export function createBoardMcpServer(
+  store: TaskApiStore,
+  hints: Omit<AgentNameHints, 'clientInfo'> = {},
+): McpServer {
   const server = new McpServer(
-    { name: MCP_SERVER_NAME, version: MCP_SERVER_VERSION },
+    {
+      name: MCP_SERVER_NAME,
+      title: MCP_SERVER_TITLE,
+      version: MCP_SERVER_VERSION,
+      icons: [{ ...MCP_LOGO_ICON, sizes: [...MCP_LOGO_ICON.sizes] }],
+    },
     { instructions: INSTRUCTIONS },
   )
   const tools = createBoardToolHandlers(store)
+  const agentName = (context: unknown) =>
+    resolveAgentName({ ...hints, clientInfo: envelopeClientInfo(context) })
 
   server.registerTool(
     'list_tasks',
@@ -97,7 +128,8 @@ export function createBoardMcpServer(store: TaskApiStore): McpServer {
       inputSchema: taskIdInput,
       annotations: { ...CHANGES_BOARD, idempotentHint: true },
     },
-    async (input) => asResult(await tools.archive_task(input)),
+    async (input, context) =>
+      asResult(await createBoardToolHandlers(store, agentName(context)).archive_task(input)),
   )
 
   server.registerTool(

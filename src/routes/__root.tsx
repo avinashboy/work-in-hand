@@ -8,6 +8,7 @@ import {
   createRootRouteWithContext,
 } from '@tanstack/react-router'
 import { THEME_INIT_SCRIPT } from '../features/board/board-theme'
+import { BOARD_LOGO_DATA_URLS } from '../features/brand/board-logo'
 import { NotFoundView } from '../features/board/components/NotFoundView'
 import boardCss from '../features/board/board.css?url'
 
@@ -23,7 +24,11 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       // Every real page sets its own title, so this one only shows on a 404.
       { title: 'Page not found' },
     ],
-    links: [{ rel: 'stylesheet', href: boardCss }],
+    links: [
+      { rel: 'stylesheet', href: boardCss },
+      // Light to start; the theme script below swaps in the dark one.
+      { rel: 'icon', type: 'image/svg+xml', href: BOARD_LOGO_DATA_URLS.light },
+    ],
     scripts: [{ children: THEME_INIT_SCRIPT }],
   }),
   component: RootComponent,

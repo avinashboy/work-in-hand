@@ -31,6 +31,7 @@ The demo needs no login and is shared by everyone who opens it, so please don't 
 - Editable titles and up to 5,000 characters of notes on every card
 - A timeline of when each card moved, and relative times with the exact time on hover or tap
 - Done cards move to History after 24 hours, or sooner with one click
+- Search History by title, and by the last 7 or 30 days, 3, 6 or 12 months, or your own start and end date and time, with 20, 30, 40 or 50 cards a page, grouped by year
 - Light and dark themes
 - Password login that stays signed in for a year
 - A [REST API](docs/API.md) with filters, for voice commands, scripts and dashboards
@@ -69,6 +70,8 @@ To try the API locally, copy `.dev.vars.example` to `.dev.vars`, set `API_KEY` t
 | `npx vitest run` | Runs the tests |
 | `npx vitest run --coverage` | Runs the tests with coverage |
 | `npx tsc --noEmit` | Checks types |
+| `npm run mock:history` | While `npm run dev` runs, adds 55 sample cards to History, from 2022 to today, for trying the search and pages |
+| `npm run mock:history:remove` | Removes those sample cards again. Your own cards aren't touched |
 
 ## Deploying
 

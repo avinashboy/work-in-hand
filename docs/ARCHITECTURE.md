@@ -76,6 +76,8 @@ The server always replaces the time on a command with its own clock.
 | `tasks` | Title, column, position, times, and archive state. History is rows with `archived_at` set |
 | `task_notes` | One row per card that has notes. Kept apart so older databases needed no change to `tasks` |
 | `task_moves` | Every column a card landed in, for its timeline |
+| `task_edits` | Every title and notes change, with the column and time |
+| `task_archive_actors` | Who moved a card to History: the board, the API, or an agent and its name. No row means it moved after 24 hours, or before this was recorded |
 | `login_attempts` | Failed-login counts per client, and one overall row keyed `*` |
 
 Things to know:
@@ -150,6 +152,9 @@ Tools return the card as JSON text and as `structuredContent`. Refusals come bac
 - `TaskEditor.tsx` is the title and notes dialog.
 - `board.css` holds all the styles, with colours as CSS variables for the light and dark themes. `board-theme.ts` remembers the choice.
 - `board-clock.ts` is a single shared timer that keeps relative times up to date.
+- `HistoryYears.tsx` splits History into one table section per year (`history-years.ts`), by when each card moved there, in the viewer's time zone.
+- `HistoryFilters.tsx` is History's search. The filter and page size live in the address (`?q=invoice&range=6m&size=50`, or `range=custom&from=…&to=…` in milliseconds), read by `history-search.ts`. `history-filter.ts` turns it into start and end times, and `readArchivePage` adds it to the SQL as bound parameters. Dates are when the card moved to History. Preset ranges count back from the server's clock; custom ones are read in the viewer's time zone.
+- `src/features/dev/` holds the sample History cards for `npm run mock:history`. `server.ts` only reaches it inside `import.meta.env.DEV`, so it isn't in builds, and it answers only on `localhost`.
 
 ## Public demo
 

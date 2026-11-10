@@ -14,8 +14,15 @@ import {
   getBoard,
 } from './board-api'
 import { DEMO_MAX_CARDS, IS_DEMO } from '../demo/demo-config'
-import type { Board, BoardCommand, BoardSnapshot } from './board-model'
+import {
+  ARCHIVE_PAGE_SIZE,
+  type ArchivePageSize,
+  type Board,
+  type BoardCommand,
+  type BoardSnapshot,
+} from './board-model'
 import { applyCommand } from './board-reducer'
+import { NO_HISTORY_FILTER, type HistoryFilter } from './history-filter'
 
 const BOARD_QUERY_KEY = ['board'] as const
 const BOARD_COMMAND_KEY = ['board-command'] as const
@@ -29,10 +36,14 @@ export const boardQueryOptions = queryOptions({
   refetchInterval: BOARD_REFRESH_MS,
 })
 
-export function archiveQueryOptions(page: number) {
+export function archiveQueryOptions(
+  page: number,
+  filter: HistoryFilter = NO_HISTORY_FILTER,
+  pageSize: ArchivePageSize = ARCHIVE_PAGE_SIZE,
+) {
   return queryOptions({
-    queryKey: [...ARCHIVE_QUERY_KEY, page],
-    queryFn: () => getArchive({ data: page }),
+    queryKey: [...ARCHIVE_QUERY_KEY, page, pageSize, filter],
+    queryFn: () => getArchive({ data: { page, pageSize, filter } }),
     staleTime: 0,
   })
 }

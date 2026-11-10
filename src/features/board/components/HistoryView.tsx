@@ -1,19 +1,51 @@
 import { useSuspenseQuery } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { LogoutButton } from '../../auth/components/LogoutButton'
 import { DemoBanner } from '../../demo/components/DemoBanner'
 import { IS_DEMO } from '../../demo/demo-config'
 import { useDemoVisit } from '../../demo/use-demo-visit'
 import { archiveQueryOptions, useDeleteArchivedTask, useDemoRoomLeft } from '../board-queries'
-import { HistoryRow } from './HistoryRow'
+import { isHistoryFiltered, type HistoryFilter } from '../history-filter'
+import { searchFromFilter } from '../history-search'
+import { ARCHIVE_PAGE_SIZE, ARCHIVE_PAGE_SIZES, type ArchivePageSize } from '../board-model'
+import { pageAfterResize } from '../history-pager'
+import { HistoryFilters } from './HistoryFilters'
+import { HistoryPager } from './HistoryPager'
+import { HistoryYears } from './HistoryYears'
 import { ThemeSwitch } from './ThemeSwitch'
 
 interface HistoryViewProps {
   readonly page: number
+  readonly pageSize: ArchivePageSize
+  readonly filter: HistoryFilter
 }
 
-export function HistoryView({ page }: HistoryViewProps) {
-  const { data } = useSuspenseQuery(archiveQueryOptions(page))
+/** Left out of the address at the default, so plain links stay short. */
+function sizeInAddress(pageSize: ArchivePageSize): { size?: ArchivePageSize } {
+  return pageSize === ARCHIVE_PAGE_SIZE ? {} : { size: pageSize }
+}
+
+export function HistoryView({ page, pageSize, filter }: HistoryViewProps) {
+  const { data } = useSuspenseQuery(archiveQueryOptions(page, filter, pageSize))
+  const navigate = useNavigate({ from: '/history' })
+  const isFiltered = isHistoryFiltered(filter)
+  const applyFilter = (next: HistoryFilter) => {
+    void navigate({ search: { ...searchFromFilter(next), ...sizeInAddress(pageSize) } })
+  }
+  // Keeps the search and lands on the page that still starts with the same card.
+  const changePageSize = (next: ArchivePageSize) => {
+    const nextPage = pageAfterResize(data.page, data.pageSize, next)
+    void navigate({
+      search: (previous) => ({
+        ...previous,
+        size: sizeInAddress(next).size,
+        page: nextPage === 1 ? undefined : nextPage,
+      }),
+    })
+  }
+  // Shown once there's more than one page's worth, or a bigger size is chosen,
+  // so you can always switch back.
+  const showsPager = data.total > ARCHIVE_PAGE_SIZES[0] || pageSize !== ARCHIVE_PAGE_SIZE
   const deletion = useDeleteArchivedTask()
   const demoRoomLeft = useDemoRoomLeft()
   useDemoVisit()
@@ -25,7 +57,7 @@ export function HistoryView({ page }: HistoryViewProps) {
         <h1>History</h1>
         <div className="masthead-meta">
           <p className="tally">
-            <strong>{data.total}</strong> finished
+            <strong>{data.total}</strong> {isFiltered ? 'found' : 'finished'}
           </p>
           <Link to="/" className="history-link">
             Back to the board
@@ -35,13 +67,18 @@ export function HistoryView({ page }: HistoryViewProps) {
         </div>
       </header>
 
+      {/* Keyed on the address, so Clear and Back reset the boxes too. */}
+      <HistoryFilters key={JSON.stringify(filter)} filter={filter} onApply={applyFilter} />
+
       {deletion.isError ? (
         <p className="history-error" role="alert">
           That card couldn't be deleted. Reload the page and try again.
         </p>
       ) : null}
 
-      {data.tasks.length === 0 ? (
+      {data.tasks.length === 0 && isFiltered ? (
+        <p className="history-empty">No cards match. Try other words or a wider date range.</p>
+      ) : data.tasks.length === 0 ? (
         <p className="history-empty">
           {IS_DEMO
             ? 'Nothing here yet. Press the archive button on a card in Done.'
@@ -59,39 +96,22 @@ export function HistoryView({ page }: HistoryViewProps) {
               <th scope="col" aria-label="Delete" />
             </tr>
           </thead>
-          <tbody>
-            {data.tasks.map((task) => (
-              <HistoryRow
-                key={task.id}
-                task={task}
-                isDeleting={deletion.isPending && deletion.variables === task.id}
-                onDelete={deletion.mutate}
-              />
-            ))}
-          </tbody>
+          <HistoryYears
+            tasks={data.tasks}
+            deletingTaskId={deletion.isPending ? deletion.variables : null}
+            onDelete={deletion.mutate}
+          />
         </table>
       )}
 
-      {data.pageCount > 1 ? (
-        <nav className="history-pager" aria-label="History pages">
-          {data.page > 1 ? (
-            <Link to="/history" search={{ page: data.page - 1 }}>
-              Newer
-            </Link>
-          ) : (
-            <span />
-          )}
-          <span>
-            Page {data.page} of {data.pageCount}
-          </span>
-          {data.page < data.pageCount ? (
-            <Link to="/history" search={{ page: data.page + 1 }}>
-              Older
-            </Link>
-          ) : (
-            <span />
-          )}
-        </nav>
+      {showsPager ? (
+        <HistoryPager
+          page={data.page}
+          pageCount={data.pageCount}
+          total={data.total}
+          pageSize={data.pageSize}
+          onPageSizeChange={changePageSize}
+        />
       ) : null}
     </main>
   )

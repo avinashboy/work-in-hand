@@ -8,7 +8,9 @@
     "preview": "vite preview",
     "deploy": "npm run build && wrangler deploy",
     "deploy:demo": "vite build --mode demo && wrangler deploy",
-    "cf-typegen": "wrangler types"
+    "cf-typegen": "wrangler types",
+    "mock:history": "node -e \"fetch('http://localhost:3000/__dev/mock-history',{method:'POST',headers:{'x-mock-history':'1'}}).then(r=>r.text()).then(console.log)\"",
+    "mock:history:remove": "node -e \"fetch('http://localhost:3000/__dev/mock-history',{method:'DELETE',headers:{'x-mock-history':'1'}}).then(r=>r.text()).then(console.log)\""
   },
   "engines": {
     "node": ">=24"

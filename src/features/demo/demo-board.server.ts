@@ -43,6 +43,7 @@ function deleteCardsCreatedBy(db: SqlDatabase, cutoff: number): void {
     db.run(`DELETE FROM task_moves WHERE task_id IN (${expired})`, cutoff)
     db.run(`DELETE FROM task_notes WHERE task_id IN (${expired})`, cutoff)
     db.run(`DELETE FROM task_edits WHERE task_id IN (${expired})`, cutoff)
+    db.run(`DELETE FROM task_archive_actors WHERE task_id IN (${expired})`, cutoff)
     db.run('DELETE FROM tasks WHERE created_at <= ?', cutoff)
   })
 }
@@ -112,9 +113,9 @@ export function createDemoBoard({ db, now }: DemoBoardOptions): DemoBoard {
       if (command.type === 'create') assertRoomForNewCard(db)
       return repository.apply(command)
     },
-    listArchive: (page) => {
+    listArchive: (page, filter, pageSize) => {
       deleteExpired()
-      return repository.listArchive(page)
+      return repository.listArchive(page, filter, pageSize)
     },
     deleteArchived: (taskId) => {
       prepareWrite()

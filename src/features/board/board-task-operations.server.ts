@@ -3,6 +3,7 @@ import {
   DONE_COLUMN_ID,
   MAX_TASKS_ON_BOARD,
   type Board,
+  type ArchiveActor,
   type BoardCommand,
   type ColumnId,
 } from './board-model'
@@ -32,7 +33,8 @@ export interface TaskOperations {
   readonly updateTask: (taskId: string, patch: TaskPatch) => TaskChange
   /** Works on the board and the history. False when there is no such card. */
   readonly removeTask: (taskId: string) => boolean
-  readonly archiveTask: (taskId: string) => TaskChange
+  /** `actor` says who moved it to History, for its timeline. */
+  readonly archiveTask: (taskId: string, actor: ArchiveActor) => TaskChange
 }
 
 interface TaskOperationsOptions {
@@ -40,7 +42,7 @@ interface TaskOperationsOptions {
   readonly now: () => number
   readonly sweepExpired: () => void
   /** Must run inside a transaction. */
-  readonly applyChange: (command: BoardCommand) => Board
+  readonly applyChange: (command: BoardCommand, actor?: ArchiveActor) => Board
   /** Must run inside a transaction. */
   readonly removeFromHistory: (taskId: string) => void
 }
@@ -107,7 +109,7 @@ export function createTaskOperations({
     summarizeTasks: () => swept(() => summarizeTasks(db)),
     updateTask: (taskId, patch) =>
       changeActive(taskId, (task) => {
-        commandsFor(task, patch, now()).forEach(applyChange)
+        commandsFor(task, patch, now()).forEach((command) => applyChange(command))
         return changed(taskId)
       }),
     removeTask: (taskId) =>
@@ -118,10 +120,10 @@ export function createTaskOperations({
         else removeFromHistory(taskId)
         return true
       }),
-    archiveTask: (taskId) =>
+    archiveTask: (taskId, actor) =>
       changeActive(taskId, (task) => {
         if (task.columnId !== DONE_COLUMN_ID) return { outcome: 'not-done' }
-        applyChange({ type: 'archive', taskId })
+        applyChange({ type: 'archive', taskId }, actor)
         return changed(taskId)
       }),
   }

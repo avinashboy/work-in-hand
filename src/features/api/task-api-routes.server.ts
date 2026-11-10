@@ -1,5 +1,5 @@
 import type { z } from 'zod'
-import { taskIdSchema, type ColumnId, type Task } from '../board/board-model'
+import { taskIdSchema, type ArchiveActor, type ColumnId, type Task } from '../board/board-model'
 import type { TaskPatch } from '../board/board-task-operations.server'
 import type {
   StoredTaskDetail,
@@ -21,6 +21,7 @@ import {
 const TASKS_PATH = '/api/tasks'
 const SUMMARY_PATH = '/api/summary'
 const TASK_PATH = /^\/api\/tasks\/([^/]+)(\/archive)?$/
+const API_ARCHIVE_ACTOR: ArchiveActor = { kind: 'api', client: null }
 
 export interface NewApiTask {
   readonly columnId: ColumnId
@@ -35,7 +36,8 @@ export interface TaskApiStore {
   readonly summarizeTasks: () => Promise<TaskSummary>
   readonly updateTask: (taskId: string, patch: TaskPatch) => Promise<TaskChange>
   readonly removeTask: (taskId: string) => Promise<boolean>
-  readonly archiveTask: (taskId: string) => Promise<TaskChange>
+  /** `actor` says who moved it to History, for its timeline. */
+  readonly archiveTask: (taskId: string, actor: ArchiveActor) => Promise<TaskChange>
 }
 
 type Handler = (request: Request) => Promise<Response>
@@ -84,7 +86,7 @@ function tasksRoutes(store: TaskApiStore): Routes {
       const task = await store.createTask({ title: body.title, notes: body.notes, columnId })
       if (!task) return fail(409, 'The board is full')
 
-      return succeed(toApiTask({ ...task, columnId, archivedAt: null, archiveReason: null }), 201)
+      return succeed(toApiTask({ ...task, columnId, archivedAt: null, archiveReason: null, archivedBy: null }), 201)
     },
   }
 }
@@ -117,7 +119,7 @@ function routesFor(pathname: string, store: TaskApiStore): Routes | null {
   const taskId = taskIdSchema.safeParse(match?.[1])
   if (!match || !taskId.success) return null
   if (match[2] === undefined) return taskRoutes(store, taskId.data)
-  return { POST: async () => respondToChange(await store.archiveTask(taskId.data)) }
+  return { POST: async () => respondToChange(await store.archiveTask(taskId.data, API_ARCHIVE_ACTOR)) }
 }
 
 /** Only call this once the API key has been checked. */

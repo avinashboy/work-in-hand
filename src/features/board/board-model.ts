@@ -7,7 +7,10 @@ export const MAX_TITLE_LENGTH = 120
 export const MAX_NOTES_LENGTH = 5000
 export const MAX_TASKS_ON_BOARD = 200
 export const ARCHIVE_AFTER_MS = 24 * 60 * 60 * 1000
-export const ARCHIVE_PAGE_SIZE = 25
+/** How many History cards a page can show. The first is the default. */
+export const ARCHIVE_PAGE_SIZES = [20, 30, 40, 50] as const
+export type ArchivePageSize = (typeof ARCHIVE_PAGE_SIZES)[number]
+export const ARCHIVE_PAGE_SIZE: ArchivePageSize = ARCHIVE_PAGE_SIZES[0]
 
 const MAX_ID_LENGTH = 64
 const TASK_ID_BYTES = 16
@@ -40,6 +43,7 @@ function withSafeText(schema: z.ZodString): z.ZodString {
 export const taskTitleSchema = withSafeText(z.string().trim().min(1).max(MAX_TITLE_LENGTH))
 export const taskNotesSchema = withSafeText(z.string().max(MAX_NOTES_LENGTH))
 export const archivePageSchema = z.number().int().min(1).max(MAX_ARCHIVE_PAGE)
+export const archivePageSizeSchema = z.literal(ARCHIVE_PAGE_SIZES)
 
 /**
  * Commands are the only way a board changes. The client replays pending ones
@@ -88,6 +92,18 @@ export const boardCommandSchema = z.discriminatedUnion('type', [
 export type ColumnId = z.infer<typeof columnIdSchema>
 export type BoardCommand = z.infer<typeof boardCommandSchema>
 export type ArchiveReason = 'confirmed' | 'expired'
+
+/** Who moved a card to History: the board's button, an app on the REST API, or an AI agent over MCP. */
+export const ARCHIVE_ACTOR_KINDS = ['board', 'api', 'agent'] as const
+export type ArchiveActorKind = (typeof ARCHIVE_ACTOR_KINDS)[number]
+
+export interface ArchiveActor {
+  readonly kind: ArchiveActorKind
+  /** The app or agent's name, such as "Claude Desktop", when it is known. */
+  readonly client: string | null
+}
+
+export const BOARD_ARCHIVE_ACTOR: ArchiveActor = { kind: 'board', client: null }
 
 export interface Task {
   readonly id: string
@@ -141,6 +157,8 @@ export interface ArchivedTask {
   readonly doneAt: number
   readonly archivedAt: number
   readonly reason: ArchiveReason
+  /** Null when it moved by itself after 24 hours, or was archived before this was recorded. */
+  readonly archivedBy: ArchiveActor | null
   /** Every column it landed in, oldest first. */
   readonly moves: readonly TaskMove[]
   /** Every title and notes change, oldest first. */
@@ -150,6 +168,7 @@ export interface ArchivedTask {
 export interface ArchivePage {
   readonly tasks: readonly ArchivedTask[]
   readonly page: number
+  readonly pageSize: ArchivePageSize
   readonly pageCount: number
   readonly total: number
 }

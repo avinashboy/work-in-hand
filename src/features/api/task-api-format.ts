@@ -24,6 +24,8 @@ export function toApiTask(task: StoredTask) {
     status: task.doneAt === null ? 'ongoing' : 'completed',
     archived: task.archivedAt !== null,
     archiveReason: task.archiveReason,
+    // Who moved it to History: { kind: 'board' | 'api' | 'agent', client }, or null.
+    archivedBy: task.archivedBy,
     createdAt: toIso(task.createdAt),
     movedAt: toIso(task.movedAt),
     doneAt: toIso(task.doneAt),

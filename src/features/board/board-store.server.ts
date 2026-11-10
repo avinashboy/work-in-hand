@@ -12,8 +12,11 @@ import {
 } from '../demo/visitor-log.server'
 import type { VisitorFingerprint } from '../demo/visitor-model'
 import {
+  ARCHIVE_PAGE_SIZE,
   createSeedBoard,
+  type ArchiveActor,
   type ArchivePage,
+  type ArchivePageSize,
   type Board,
   type BoardCommand,
   type BoardSnapshot,
@@ -25,6 +28,7 @@ import {
   type NewTask,
 } from './board-repository.server'
 import type { TaskPatch } from './board-task-operations.server'
+import { NO_HISTORY_FILTER, type HistoryFilter } from './history-filter'
 import type {
   StoredTaskDetail,
   TaskChange,
@@ -134,8 +138,20 @@ export class BoardStore extends DurableObject<Cloudflare.Env> {
     return this.repository.createTask(input)
   }
 
-  listArchive(page: number): ArchivePage {
-    return this.repository.listArchive(page)
+  listArchive(
+    page: number,
+    filter: HistoryFilter = NO_HISTORY_FILTER,
+    pageSize: ArchivePageSize = ARCHIVE_PAGE_SIZE,
+  ): ArchivePage {
+    return this.repository.listArchive(page, filter, pageSize)
+  }
+
+  /** `npm run dev` only: adds or removes the mock History cards. */
+  async changeMockHistory(action: 'add' | 'remove'): Promise<number> {
+    if (!import.meta.env.DEV) throw new Error('Mock History is for local development only')
+    const mock = await import('../dev/mock-history.server')
+    const db = createDurableObjectSql(this.ctx.storage)
+    return action === 'add' ? mock.insertMockHistory(db, Date.now()) : mock.removeMockHistory(db)
   }
 
   async deleteArchived(taskId: string, visitor: DemoVisitor | null = null): Promise<void> {
@@ -163,8 +179,8 @@ export class BoardStore extends DurableObject<Cloudflare.Env> {
     return this.repository.removeTask(taskId)
   }
 
-  archiveTask(taskId: string): TaskChange {
-    return this.repository.archiveTask(taskId)
+  archiveTask(taskId: string, actor: ArchiveActor): TaskChange {
+    return this.repository.archiveTask(taskId, actor)
   }
 }
 
@@ -181,7 +197,7 @@ export function getTaskApiStore() {
     summarizeTasks: () => store.summarizeTasks(),
     updateTask: (taskId: string, patch: TaskPatch) => store.updateTask(taskId, patch),
     removeTask: (taskId: string) => store.removeTask(taskId),
-    archiveTask: (taskId: string) => store.archiveTask(taskId),
+    archiveTask: (taskId: string, actor: ArchiveActor) => store.archiveTask(taskId, actor),
   }
 }
 

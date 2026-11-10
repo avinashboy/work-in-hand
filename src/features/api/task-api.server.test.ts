@@ -163,6 +163,7 @@ describe('handleTaskApi: creating cards', () => {
         status: 'ongoing',
         archived: false,
         archiveReason: null,
+        archivedBy: null,
         createdAt: new Date(CREATED_AT).toISOString(),
         movedAt: new Date(CREATED_AT).toISOString(),
         doneAt: null,

@@ -1,28 +1,37 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { z } from 'zod'
-import { archivePageSchema } from '../features/board/board-model'
 import { archiveQueryOptions } from '../features/board/board-queries'
 import { HistoryView } from '../features/board/components/HistoryView'
-
-const historySearchSchema = z.object({
-  page: archivePageSchema.optional().catch(undefined),
-})
+import {
+  filterFromSearch,
+  historySearchSchema,
+  pageSizeFromSearch,
+} from '../features/board/history-search'
 
 export const Route = createFileRoute('/history')({
   validateSearch: historySearchSchema,
-  loaderDeps: ({ search }) => ({ page: search.page ?? 1 }),
+  loaderDeps: ({ search }) => ({
+    page: search.page ?? 1,
+    pageSize: pageSizeFromSearch(search),
+    filter: filterFromSearch(search),
+  }),
   head: () => ({
     meta: [{ title: 'History' }],
   }),
   loader: ({ context, deps }) =>
-    context.queryClient.ensureQueryData(archiveQueryOptions(deps.page)),
+    context.queryClient.ensureQueryData(archiveQueryOptions(deps.page, deps.filter, deps.pageSize)),
   component: HistoryPage,
   errorComponent: HistoryLoadError,
 })
 
 function HistoryPage() {
-  const { page } = Route.useSearch()
-  return <HistoryView page={page ?? 1} />
+  const search = Route.useSearch()
+  return (
+    <HistoryView
+      page={search.page ?? 1}
+      pageSize={pageSizeFromSearch(search)}
+      filter={filterFromSearch(search)}
+    />
+  )
 }
 
 function HistoryLoadError() {

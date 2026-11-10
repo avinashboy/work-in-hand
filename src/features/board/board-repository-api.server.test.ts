@@ -12,6 +12,7 @@ import { createBoardRepository } from './board-repository.server'
 import type { TaskChange, TaskQuery } from './board-task-queries.server'
 
 const START = Date.UTC(2026, 0, 1)
+const API = { kind: 'api', client: null } as const
 const HOUR = 60 * 60 * 1000
 
 const emptyBoard: Board = {
@@ -311,7 +312,7 @@ describe('board repository for the API', () => {
       add('a')
       moveToDone('a')
 
-      const task = changedTask(repository.archiveTask('a'))
+      const task = changedTask(repository.archiveTask('a', API))
 
       expect(task).toMatchObject({ archivedAt: time, archiveReason: 'confirmed' })
     })
@@ -319,18 +320,18 @@ describe('board repository for the API', () => {
     it('refuses a card that is not done', () => {
       add('a')
 
-      expect(repository.archiveTask('a')).toEqual({ outcome: 'not-done' })
+      expect(repository.archiveTask('a', API)).toEqual({ outcome: 'not-done' })
     })
 
     it('reports an unknown card', () => {
-      expect(repository.archiveTask('nope')).toEqual({ outcome: 'missing' })
+      expect(repository.archiveTask('nope', API)).toEqual({ outcome: 'missing' })
     })
 
     it('reports a card already in the history', () => {
       add('a')
       archive('a')
 
-      expect(repository.archiveTask('a')).toEqual({ outcome: 'history' })
+      expect(repository.archiveTask('a', API)).toEqual({ outcome: 'history' })
     })
   })
 })

@@ -3,11 +3,18 @@ import type { SqlDatabase, SqlValue } from '../../lib/sql-database'
 import {
   COLUMN_IDS,
   COLUMN_TITLES,
+  type ArchiveActor,
   type ArchiveReason,
   type ColumnId,
   type TaskEdit,
   type TaskMove,
 } from './board-model'
+import {
+  JOIN_ARCHIVE_ACTORS,
+  SELECT_ARCHIVE_ACTOR,
+  archiveActorColumns,
+  toArchiveActor,
+} from './board-archive-actors.server'
 import { readEdits } from './board-edits.server'
 
 export const TASK_SORTS = ['createdAt', 'movedAt', 'doneAt', 'title'] as const
@@ -39,6 +46,8 @@ export interface StoredTask {
   readonly doneAt: number | null
   readonly archivedAt: number | null
   readonly archiveReason: ArchiveReason | null
+  /** Who moved it to History; null on the board, after 24 hours, or for older cards. */
+  readonly archivedBy: ArchiveActor | null
 }
 
 export interface StoredTaskDetail extends StoredTask {
@@ -74,9 +83,10 @@ const SORT_COLUMNS: Readonly<Record<TaskSort, string>> = {
   title: 't.title COLLATE NOCASE',
 }
 
-const FROM_TASKS = 'FROM tasks t LEFT JOIN task_notes n ON n.task_id = t.id'
+const FROM_TASKS = `FROM tasks t LEFT JOIN task_notes n ON n.task_id = t.id ${JOIN_ARCHIVE_ACTORS}`
 const SELECT_TASKS = `SELECT t.id, t.title, COALESCE(n.notes, '') AS notes, t.column_id,
-  t.created_at, t.moved_at, t.done_at, t.archived_at, t.archive_reason ${FROM_TASKS}`
+  t.created_at, t.moved_at, t.done_at, t.archived_at, t.archive_reason,
+  ${SELECT_ARCHIVE_ACTOR} ${FROM_TASKS}`
 
 const taskRowSchema = z.object({
   id: z.string(),
@@ -88,6 +98,7 @@ const taskRowSchema = z.object({
   done_at: z.number().nullable(),
   archived_at: z.number().nullable(),
   archive_reason: z.enum(['confirmed', 'expired']).nullable(),
+  ...archiveActorColumns,
 })
 
 const moveRowSchema = z.object({ column_id: z.enum(COLUMN_IDS), at: z.number() })
@@ -117,6 +128,7 @@ function toStoredTask(row: unknown): StoredTask {
     doneAt: parsed.done_at,
     archivedAt: parsed.archived_at,
     archiveReason: parsed.archive_reason,
+    archivedBy: toArchiveActor(parsed),
   }
 }
 

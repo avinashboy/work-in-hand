@@ -18,6 +18,7 @@ const stored: StoredTaskDetail = {
   doneAt: null,
   archivedAt: null,
   archiveReason: null,
+  archivedBy: null,
   moves: [{ columnId: 'doing', at: AT }],
   edits: [{ kind: 'notes-added', columnId: 'doing', at: AT }],
 }
@@ -30,6 +31,7 @@ const apiTask = {
   status: 'ongoing',
   archived: false,
   archiveReason: null,
+  archivedBy: null,
   createdAt: ISO,
   movedAt: ISO,
   doneAt: null,
@@ -374,7 +376,7 @@ describe('POST /api/tasks/:id/archive', () => {
     const { response } = await send(call('POST', '/api/tasks/abc123/archive'), api)
 
     expect(response.status).toBe(200)
-    expect(api.archiveTask).toHaveBeenCalledWith('abc123')
+    expect(api.archiveTask).toHaveBeenCalledWith('abc123', { kind: 'api', client: null })
   })
 
   it.each([

@@ -1,10 +1,10 @@
 import { useId, useState } from 'react'
 import type { ArchivedTask } from '../board-model'
-import { ARCHIVE_REASON_LABELS, buildTimeline } from '../board-timeline'
+import { buildTimeline, describeArchive } from '../board-timeline'
 import { HistoryDelete } from './HistoryDelete'
 import { Timestamp } from './Timestamp'
 
-const COLUMN_COUNT = 6
+export const COLUMN_COUNT = 6
 
 function TaskTimelineList({ task }: { readonly task: ArchivedTask }) {
   const { steps, isPartial } = buildTimeline(task)
@@ -68,7 +68,7 @@ export function HistoryRow({ task, isDeleting, onDelete }: HistoryRowProps) {
         <td data-label="Moved here">
           <Timestamp value={task.archivedAt} />
         </td>
-        <td data-label="How">{ARCHIVE_REASON_LABELS[task.reason]}</td>
+        <td data-label="How">{describeArchive(task)}</td>
         {/* Stops here so that deleting never opens or closes the timeline. */}
         <td className="history-actions" onClick={(event) => event.stopPropagation()}>
           <HistoryDelete

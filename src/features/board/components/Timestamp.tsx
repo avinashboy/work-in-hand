@@ -1,15 +1,5 @@
-import { useSyncExternalStore } from 'react'
 import { formatTimestamp } from '../board-time'
-
-const subscribeToNothing = () => () => {}
-
-function useHasHydrated(): boolean {
-  return useSyncExternalStore(
-    subscribeToNothing,
-    () => true,
-    () => false,
-  )
-}
+import { useHasHydrated } from '../use-has-hydrated'
 
 interface TimestampProps {
   readonly value: number

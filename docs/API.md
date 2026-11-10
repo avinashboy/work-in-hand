@@ -74,6 +74,7 @@ Responses always use the id. Requests accept any of the names below. Capitals do
 | `status` | string | `ongoing`, or `completed` once the card has reached Done |
 | `archived` | boolean | `true` when the card is in History |
 | `archiveReason` | string or null | `confirmed` if someone filed it, `expired` if it was filed automatically |
+| `archivedBy` | object or null | Who filed it: `{ "kind": "board" \| "api" \| "agent", "client": "Claude Desktop" or null }`. Null on the board, when filed automatically, or for cards filed before this was recorded |
 | `createdAt` | string | When it was created |
 | `movedAt` | string | When it reached its current column |
 | `doneAt` | string or null | When it reached Done |
@@ -269,7 +270,7 @@ Deleting a card that is already gone returns `404`. A client retrying after a ti
 POST /api/tasks/:id/archive
 ```
 
-Takes no body. The card must be in Done. `200 OK` returns the card with `archived: true`, `archiveReason: "confirmed"`, its `moves` and its `edits`. A card outside Done, or already in History, returns `409`.
+Takes no body. The card must be in Done. `200 OK` returns the card with `archived: true`, `archiveReason: "confirmed"`, `archivedBy: { "kind": "api", "client": null }`, its `moves` and its `edits`. History shows it as "Through the API". A card outside Done, or already in History, returns `409`.
 
 ```bash
 curl -X POST "https://YOUR-SITE.workers.dev/api/tasks/CARD_ID/archive" \

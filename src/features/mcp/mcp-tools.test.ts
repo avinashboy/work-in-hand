@@ -16,6 +16,7 @@ const storedTask: StoredTaskDetail = {
   doneAt: null,
   archivedAt: null,
   archiveReason: null,
+  archivedBy: null,
   moves: [{ columnId: 'backlog', at: AT }],
   edits: [{ kind: 'title', columnId: 'review', at: AT }],
 }
@@ -178,6 +179,15 @@ describe('MCP board tools', () => {
     expect(textOf(await tools.archive_task({ taskId: 'card-1' }))).toBe(
       'Only cards in Done can be moved to History',
     )
+  })
+
+  it('records the agent, with its name, as the one who moved a card to History', async () => {
+    const board = store()
+    await createBoardToolHandlers(board, 'Claude Desktop').archive_task({ taskId: 'card-1' })
+    await createBoardToolHandlers(board, null).archive_task({ taskId: 'card-1' })
+
+    expect(board.archiveTask).toHaveBeenNthCalledWith(1, 'card-1', { kind: 'agent', client: 'Claude Desktop' })
+    expect(board.archiveTask).toHaveBeenNthCalledWith(2, 'card-1', { kind: 'agent', client: null })
   })
 
   it('deletes a card and reports a missing one', async () => {

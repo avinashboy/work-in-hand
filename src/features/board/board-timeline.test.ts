@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ArchivedTask } from './board-model'
-import { buildTimeline } from './board-timeline'
+import { buildTimeline, describeArchive } from './board-timeline'
 
 const CREATED = 1000
 
@@ -12,6 +12,8 @@ const task: ArchivedTask = {
   doneAt: 4000,
   archivedAt: 5000,
   reason: 'confirmed',
+  // Cards archived before this was recorded have no one on file.
+  archivedBy: null,
   moves: [
     { columnId: 'backlog', at: CREATED },
     { columnId: 'doing', at: 2000 },
@@ -39,6 +41,20 @@ describe('buildTimeline', () => {
 
     expect(buildTimeline(task).steps.at(-1)?.detail).toBe('Archive pressed')
     expect(expired.steps.at(-1)?.detail).toBe('After 24 hours')
+  })
+
+  it('says who moved the card to History: the board, an app or a named agent', () => {
+    const by = (archivedBy: ArchivedTask['archivedBy']) => describeArchive({ ...task, archivedBy })
+
+    expect(by({ kind: 'board', client: null })).toBe('Archive pressed')
+    expect(by({ kind: 'agent', client: 'Claude Desktop' })).toBe('By an AI agent: Claude Desktop')
+    expect(by({ kind: 'agent', client: null })).toBe('By an AI agent')
+    expect(by({ kind: 'api', client: null })).toBe('Through the API')
+    expect(by({ kind: 'api', client: 'Home Assistant' })).toBe('Through the API: Home Assistant')
+    expect(describeArchive({ ...task, reason: 'expired', archivedBy: null })).toBe('After 24 hours')
+    expect(buildTimeline({ ...task, archivedBy: { kind: 'agent', client: 'Cursor' } }).steps.at(-1)?.detail).toBe(
+      'By an AI agent: Cursor',
+    )
   })
 
   it('gives each stage the tone of its column', () => {
