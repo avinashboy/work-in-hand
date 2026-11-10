@@ -152,6 +152,20 @@ describe('chooseTheme', () => {
     expect(tabIcon()).toBe(BOARD_LOGO_DATA_URLS.light)
   })
 
+  it('switches every tab icon link, since hydration can leave a second copy that the browser shows', () => {
+    stubSystemTheme('light')
+    document.head.innerHTML += `<link rel="icon" href="${BOARD_LOGO_DATA_URLS.light}">`
+    const allIcons = () =>
+      [...document.querySelectorAll('link[rel="icon"]')].map((link) => link.getAttribute('href'))
+
+    chooseTheme('dark')
+    expect(allIcons()).toEqual([BOARD_LOGO_DATA_URLS.dark, BOARD_LOGO_DATA_URLS.dark])
+
+    window.localStorage.setItem(STORAGE_KEY, 'light')
+    runInitScript()
+    expect(allIcons()).toEqual([BOARD_LOGO_DATA_URLS.light, BOARD_LOGO_DATA_URLS.light])
+  })
+
   it('still changes the page when storage is blocked', () => {
     stubSystemTheme('light')
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {

@@ -20,13 +20,20 @@ export const THEME_INIT_SCRIPT = `(function () {
   }
   document.documentElement.dataset.theme = theme;
   var icons = ${JSON.stringify(BOARD_LOGO_DATA_URLS)};
-  var icon = document.querySelector('link[rel="icon"]');
-  if (icon) icon.setAttribute('href', icons[theme]);
+  document.querySelectorAll('link[rel="icon"]').forEach(function (icon) {
+    icon.setAttribute('href', icons[theme]);
+  });
 })();`
 
-/** The tab icon is rendered light in <head>; this keeps it on the page's theme. */
+/**
+ * The tab icon is rendered light in <head>; this keeps it on the page's theme.
+ * Hydration in production can leave two icon links, and the browser shows the
+ * last one, so every link is updated, not just the first.
+ */
 function applyTabIcon(theme: Theme): void {
-  document.querySelector('link[rel="icon"]')?.setAttribute('href', BOARD_LOGO_DATA_URLS[theme])
+  document.querySelectorAll('link[rel="icon"]').forEach((icon) => {
+    icon.setAttribute('href', BOARD_LOGO_DATA_URLS[theme])
+  })
 }
 
 function parseTheme(value: string | null | undefined): Theme | null {
