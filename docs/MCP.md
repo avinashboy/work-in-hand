@@ -37,9 +37,9 @@ Each tool call is its own request, so one agent conversation can use several of 
 
 ## Who did it, in History
 
-When an agent moves a card to History, the **How** column and the card's timeline say which agent did it, for example "By an AI agent: Claude Desktop". Cards filed with the board's button say "Archive pressed", apps on the REST API say "Through the API", and cards filed automatically say "After 24 hours".
+When an agent moves a card to History, the **How** column and the card's timeline say which agent did it, for example "AI agent: Claude Desktop". Cards filed with the board's button say "Archive pressed", apps on the REST API say "Through the API", and cards filed automatically say "After 24 hours".
 
-Many clients don't say who they are on each call, so name the client in the address with `?client=`, as in the examples below. Known names become friendly ones: `claude-desktop`, `claude-code`, `cursor`, `vscode`, `chatgpt`, `windsurf`. Any other name is kept as plain text, up to 40 characters. Without it, History says "By an AI agent", unless the client names itself.
+Many clients don't say who they are on each call, so name the client in the address with `?client=`, as in the examples below. Known names become friendly ones: `claude-desktop`, `claude-code`, `cursor`, `vscode`, `chatgpt`, `windsurf`. Any other name is kept as plain text, up to 40 characters. Without it, History says "AI agent", unless the client names itself.
 
 ## Connecting a client
 

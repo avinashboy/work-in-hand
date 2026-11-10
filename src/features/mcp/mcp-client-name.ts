@@ -1,5 +1,5 @@
 /**
- * Works out which AI app is calling, so History can say "By an AI agent:
+ * Works out which AI app is calling, so History can say "AI agent:
  * Claude Desktop". Older MCP clients only name themselves in the first
  * handshake, which this stateless server never links to later calls, so a
  * client can also name itself in the address: /mcp?client=claude-desktop.

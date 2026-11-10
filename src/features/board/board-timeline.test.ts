@@ -47,13 +47,13 @@ describe('buildTimeline', () => {
     const by = (archivedBy: ArchivedTask['archivedBy']) => describeArchive({ ...task, archivedBy })
 
     expect(by({ kind: 'board', client: null })).toBe('Archive pressed')
-    expect(by({ kind: 'agent', client: 'Claude Desktop' })).toBe('By an AI agent: Claude Desktop')
-    expect(by({ kind: 'agent', client: null })).toBe('By an AI agent')
+    expect(by({ kind: 'agent', client: 'Claude Desktop' })).toBe('AI agent: Claude Desktop')
+    expect(by({ kind: 'agent', client: null })).toBe('AI agent')
     expect(by({ kind: 'api', client: null })).toBe('Through the API')
     expect(by({ kind: 'api', client: 'Home Assistant' })).toBe('Through the API: Home Assistant')
     expect(describeArchive({ ...task, reason: 'expired', archivedBy: null })).toBe('After 24 hours')
     expect(buildTimeline({ ...task, archivedBy: { kind: 'agent', client: 'Cursor' } }).steps.at(-1)?.detail).toBe(
-      'By an AI agent: Cursor',
+      'AI agent: Cursor',
     )
   })
 

@@ -17,7 +17,7 @@ export const ARCHIVE_REASON_LABELS: Readonly<Record<ArchiveReason, string>> = {
 const ACTOR_LABELS: Readonly<Record<ArchiveActor['kind'], string>> = {
   board: 'Archive pressed',
   api: 'Through the API',
-  agent: 'By an AI agent',
+  agent: 'AI agent',
 }
 
 /** How a card reached History, naming the app or agent when it is known. Shown in the How column and the timeline. */
