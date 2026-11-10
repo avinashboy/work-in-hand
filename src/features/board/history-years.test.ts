@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { groupByYear, localYear, utcYear } from './history-years'
+import {
+  groupByMonth,
+  groupByYear,
+  localMonth,
+  localYear,
+  monthName,
+  utcMonth,
+  utcYear,
+} from './history-years'
 
 const at = (iso: string) => ({ id: iso, archivedAt: Date.parse(iso) })
 
@@ -38,5 +46,55 @@ describe('groupByYear', () => {
     const time = new Date(2024, 0, 1, 0, 30).getTime() // 00:30 on 1 Jan 2024, local
 
     expect(localYear(time)).toBe(2024)
+  })
+})
+
+describe('groupByMonth', () => {
+  it('splits a year’s newest-first cards into one group per month, in order', () => {
+    const tasks = [
+      at('2026-11-20T10:00:00Z'),
+      at('2026-11-02T10:00:00Z'),
+      at('2026-03-15T10:00:00Z'),
+      at('2026-01-15T10:00:00Z'),
+      at('2026-01-01T10:00:00Z'),
+    ]
+
+    const groups = groupByMonth(tasks, utcMonth)
+
+    expect(groups.map(({ month, tasks: inMonth }) => [month, inMonth.length])).toEqual([
+      [10, 2],
+      [2, 1],
+      [0, 2],
+    ])
+    expect(groups[0].tasks[0]).toBe(tasks[0])
+  })
+
+  it('gives no groups for no cards', () => {
+    expect(groupByMonth([], utcMonth)).toEqual([])
+  })
+
+  it('reads the local month in the viewer’s own time zone', () => {
+    const time = new Date(2024, 2, 1, 0, 30).getTime() // 00:30 on 1 Mar 2024, local
+
+    expect(localMonth(time)).toBe(2)
+  })
+})
+
+describe('monthName', () => {
+  it('names all twelve months in English', () => {
+    expect(Array.from({ length: 12 }, (_, month) => monthName(month))).toEqual([
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ])
   })
 })

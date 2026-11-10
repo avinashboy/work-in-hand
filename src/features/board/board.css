@@ -1119,6 +1119,22 @@ body {
   padding-top: 0.6rem;
 }
 
+/* Months sit under the year: smaller, quieter, with a hairline instead of a rule. */
+.history-table .history-month th {
+  padding: 1.1rem 0 0.35rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+.history-table .history-year + .history-month th {
+  padding-top: 0.7rem;
+}
+
 @media (max-width: 760px) {
   .history-table .history-year {
     padding: 0;
@@ -1128,6 +1144,12 @@ body {
   .history-table .history-year th {
     padding: 1.4rem 0 0.35rem;
     border-bottom: 2px solid var(--ink);
+  }
+
+  /* Rows become blocks with their own rule here; the month keeps only its hairline. */
+  .history-table .history-month {
+    padding: 0;
+    border-bottom: 0;
   }
 }
 

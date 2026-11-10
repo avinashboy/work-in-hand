@@ -63,4 +63,27 @@ describe('HistoryYears', () => {
 
     expect(screen.getByRole('rowgroup', { name: 'Moved to History in 2025' })).toBeTruthy()
   })
+
+  it('puts a month heading above each month’s cards, inside its year', () => {
+    renderYears()
+
+    const groups = screen.getAllByRole('rowgroup')
+    const rowsIn2026 = within(groups[0])
+      .getAllByRole('row')
+      .map((row) => row.textContent ?? '')
+    const june = rowsIn2026.findIndex((text) => text === 'June')
+    const march = rowsIn2026.findIndex((text) => text === 'March')
+
+    expect(june).toBeGreaterThan(0)
+    expect(rowsIn2026[june + 1]).toContain('Plan the newsletter')
+    expect(march).toBeGreaterThan(june + 1)
+    expect(rowsIn2026[march + 1]).toContain('Fix the login loop')
+    expect(within(groups[2]).getByText('May')).toBeTruthy()
+  })
+
+  it('names the month and year for screen readers', () => {
+    renderYears()
+
+    expect(screen.getByLabelText('June 2026')).toBeTruthy()
+  })
 })
