@@ -4,11 +4,20 @@ import {
   type ArchiveReason,
   type ArchivedTask,
   type ColumnId,
+  type TaskEdit,
+  type TaskEditKind,
 } from './board-model'
 
 export const ARCHIVE_REASON_LABELS: Readonly<Record<ArchiveReason, string>> = {
   confirmed: 'Archive pressed',
   expired: 'After 24 hours',
+}
+
+const EDIT_LABELS: Readonly<Record<TaskEditKind, string>> = {
+  title: 'title changed',
+  'notes-added': 'notes added',
+  'notes-changed': 'notes changed',
+  'notes-removed': 'notes removed',
 }
 
 export interface TimelineStep {
@@ -26,6 +35,20 @@ export interface TaskTimeline {
 
 function columnName(columnId: ColumnId): string {
   return COLUMN_TITLES[columnId].toLowerCase()
+}
+
+function editStep({ kind, columnId, at }: TaskEdit): TimelineStep {
+  return {
+    label: `${COLUMN_TITLES[columnId]}: ${EDIT_LABELS[kind]}`,
+    detail: null,
+    at,
+    tone: columnId,
+  }
+}
+
+/** Sorted by time; a move and an edit at the same moment keep the move first. */
+function byTime(steps: readonly TimelineStep[]): readonly TimelineStep[] {
+  return [...steps].sort((a, b) => a.at - b.at)
 }
 
 export function buildTimeline(task: ArchivedTask): TaskTimeline {
@@ -54,5 +77,7 @@ export function buildTimeline(task: ArchivedTask): TaskTimeline {
     tone: 'history',
   }
 
-  return { steps: [started, ...landings, filed], isPartial: !startMove }
+  const changes = byTime([...landings, ...task.edits.map(editStep)])
+
+  return { steps: [started, ...changes, filed], isPartial: !startMove }
 }

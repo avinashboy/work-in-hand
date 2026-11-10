@@ -14,6 +14,7 @@ import {
   type ColumnId,
   type Task,
 } from './board-model'
+import { EDITS_SCHEMA, deleteEdits, readEdits, recordEdits } from './board-edits.server'
 import { applyCommand, countTasks } from './board-reducer'
 import { createTaskOperations, type TaskOperations } from './board-task-operations.server'
 
@@ -175,6 +176,7 @@ function saveChangedNotes(db: SqlDatabase, previous: Board, next: Board): void {
 function setUpSchema(db: SqlDatabase, seedBoard: Board): void {
   db.transaction(() => {
     db.script(NOTES_SCHEMA)
+    db.script(EDITS_SCHEMA)
     const isNewDatabase =
       db.query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'tasks'")
         .length === 0
@@ -254,6 +256,7 @@ function removeMissingTasks(
         }
       : (id: string) => {
           db.run('DELETE FROM task_moves WHERE task_id = ?', id)
+          deleteEdits(db, id)
           deleteNotes(db, id)
           db.run('DELETE FROM tasks WHERE id = ?', id)
         }
@@ -291,7 +294,9 @@ function readArchivePage(db: SqlDatabase, requestedPage: number): ArchivePage {
       (page - 1) * ARCHIVE_PAGE_SIZE,
     )
     .map((row) => archivedRowSchema.parse(row))
-  const moves = readMoves(db, rows.map(({ id }) => id))
+  const ids = rows.map(({ id }) => id)
+  const moves = readMoves(db, ids)
+  const edits = readEdits(db, ids)
   const tasks = rows.map((row) => ({
     id: row.id,
     title: row.title,
@@ -303,6 +308,7 @@ function readArchivePage(db: SqlDatabase, requestedPage: number): ArchivePage {
     moves: moves
       .filter((move) => move.task_id === row.id)
       .map(({ column_id: columnId, at }) => ({ columnId, at })),
+    edits: edits.get(row.id) ?? [],
   }))
 
   return { tasks, page, pageCount, total }
@@ -336,6 +342,7 @@ export function createBoardRepository({
     // Compared with what was really saved: an archived id can't be revived.
     const saved = loadBoard(db)
     recordMoves(db, previous, saved)
+    recordEdits(db, previous, saved, time)
     return saved
   }
 
@@ -345,6 +352,7 @@ export function createBoardRepository({
     const removed = db.run('DELETE FROM tasks WHERE id = ? AND archived_at IS NOT NULL', taskId)
     if (removed === 0) return
     db.run('DELETE FROM task_moves WHERE task_id = ?', taskId)
+    deleteEdits(db, taskId)
     deleteNotes(db, taskId)
   }
 

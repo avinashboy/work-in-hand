@@ -19,6 +19,7 @@ const stored: StoredTaskDetail = {
   archivedAt: null,
   archiveReason: null,
   moves: [{ columnId: 'doing', at: AT }],
+  edits: [{ kind: 'notes-added', columnId: 'doing', at: AT }],
 }
 
 const apiTask = {
@@ -33,6 +34,12 @@ const apiTask = {
   movedAt: ISO,
   doneAt: null,
   archivedAt: null,
+}
+
+const detail = {
+  ...apiTask,
+  moves: [{ column: 'doing', at: ISO }],
+  edits: [{ kind: 'notes-added', column: 'doing', at: ISO }],
 }
 
 const changed: TaskChange = { outcome: 'changed', task: stored }
@@ -257,7 +264,7 @@ describe('GET /api/tasks/:id', () => {
     const { response, body } = await send(call('GET', '/api/tasks/abc123'))
 
     expect(response.status).toBe(200)
-    expect(body.data).toEqual({ ...apiTask, moves: [{ column: 'doing', at: ISO }] })
+    expect(body.data).toEqual(detail)
   })
 
   it('answers 404 for an unknown card', async () => {
@@ -291,7 +298,7 @@ describe('PATCH /api/tasks/:id', () => {
       columnId: 'done',
       position: 0,
     })
-    expect(body.data).toEqual({ ...apiTask, moves: [{ column: 'doing', at: ISO }] })
+    expect(body.data).toEqual(detail)
   })
 
   it('sends only the fields that were given', async () => {

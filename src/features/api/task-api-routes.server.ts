@@ -71,6 +71,7 @@ function toApiTaskDetail(task: StoredTaskDetail) {
   return {
     ...toApiTask(task),
     moves: task.moves.map(({ columnId, at }) => ({ column: columnId, at: toIso(at) })),
+    edits: task.edits.map(({ kind, columnId, at }) => ({ kind, column: columnId, at: toIso(at) })),
   }
 }
 

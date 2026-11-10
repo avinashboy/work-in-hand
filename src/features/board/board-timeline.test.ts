@@ -18,6 +18,7 @@ const task: ArchivedTask = {
     { columnId: 'review', at: 3000 },
     { columnId: 'done', at: 4000 },
   ],
+  edits: [],
 }
 
 describe('buildTimeline', () => {
@@ -85,6 +86,64 @@ describe('buildTimeline', () => {
       'Started',
       'Done',
       'Moved to history',
+    ])
+  })
+
+  it('places title and notes edits among the moves, naming the column', () => {
+    const { steps } = buildTimeline({
+      ...task,
+      edits: [
+        { kind: 'title', columnId: 'review', at: 3500 },
+        { kind: 'notes-added', columnId: 'done', at: 4500 },
+      ],
+    })
+
+    expect(steps.map(({ label, at }) => [label, at])).toEqual([
+      ['Started in backlog', 1000],
+      ['Moved to in progress', 2000],
+      ['Moved to in review', 3000],
+      ['In review: title changed', 3500],
+      ['Done', 4000],
+      ['Done: notes added', 4500],
+      ['Moved to history', 5000],
+    ])
+  })
+
+  it('gives an edit the tone of the column it was made in', () => {
+    const { steps } = buildTimeline({
+      ...task,
+      edits: [{ kind: 'notes-changed', columnId: 'doing', at: 2500 }],
+    })
+
+    expect(steps.find(({ at }) => at === 2500)?.tone).toBe('doing')
+  })
+
+  it('names each kind of notes edit', () => {
+    const { steps } = buildTimeline({
+      ...task,
+      edits: [
+        { kind: 'notes-added', columnId: 'backlog', at: 1100 },
+        { kind: 'notes-changed', columnId: 'backlog', at: 1200 },
+        { kind: 'notes-removed', columnId: 'backlog', at: 1300 },
+      ],
+    })
+
+    expect(steps.slice(1, 4).map(({ label }) => label)).toEqual([
+      'Backlog: notes added',
+      'Backlog: notes changed',
+      'Backlog: notes removed',
+    ])
+  })
+
+  it('keeps a move before an edit made at the same moment', () => {
+    const { steps } = buildTimeline({
+      ...task,
+      edits: [{ kind: 'title', columnId: 'doing', at: 2000 }],
+    })
+
+    expect(steps.slice(1, 3).map(({ label }) => label)).toEqual([
+      'Moved to in progress',
+      'In progress: title changed',
     ])
   })
 

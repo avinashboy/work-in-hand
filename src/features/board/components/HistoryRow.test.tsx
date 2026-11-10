@@ -16,6 +16,7 @@ const task: ArchivedTask = {
     { columnId: 'doing', at: 2_000_000 },
     { columnId: 'done', at: 3_000_000 },
   ],
+  edits: [],
 }
 
 const onDelete = vi.fn()
@@ -176,6 +177,21 @@ describe('HistoryRow', () => {
 
     const panel = document.getElementById(toggle.getAttribute('aria-controls') ?? '')
     expect(panel?.textContent).toContain('Started in backlog')
+  })
+
+  it('shows title and notes edits in the timeline', () => {
+    const toggle = renderRow({
+      ...task,
+      edits: [
+        { kind: 'title', columnId: 'doing', at: 2_500_000 },
+        { kind: 'notes-added', columnId: 'done', at: 3_500_000 },
+      ],
+    })
+
+    fireEvent.click(toggle)
+
+    expect(screen.getByText('In progress: title changed')).toBeTruthy()
+    expect(screen.getByText('Done: notes added')).toBeTruthy()
   })
 
   it('explains when earlier moves were not recorded', () => {

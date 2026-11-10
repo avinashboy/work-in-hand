@@ -5,8 +5,10 @@ import {
   COLUMN_TITLES,
   type ArchiveReason,
   type ColumnId,
+  type TaskEdit,
   type TaskMove,
 } from './board-model'
+import { readEdits } from './board-edits.server'
 
 export const TASK_SORTS = ['createdAt', 'movedAt', 'doneAt', 'title'] as const
 export type TaskSort = (typeof TASK_SORTS)[number]
@@ -41,6 +43,7 @@ export interface StoredTask {
 
 export interface StoredTaskDetail extends StoredTask {
   readonly moves: readonly TaskMove[]
+  readonly edits: readonly TaskEdit[]
 }
 
 export interface TaskListPage {
@@ -201,7 +204,9 @@ export function findTask(db: SqlDatabase, taskId: string): StoredTaskDetail | nu
     .map((move) => moveRowSchema.parse(move))
     .map(({ column_id: columnId, at }) => ({ columnId, at }))
 
-  return { ...toStoredTask(row), moves }
+  const edits = readEdits(db, [taskId]).get(taskId) ?? []
+
+  return { ...toStoredTask(row), moves, edits }
 }
 
 export function summarizeTasks(db: SqlDatabase): TaskSummary {

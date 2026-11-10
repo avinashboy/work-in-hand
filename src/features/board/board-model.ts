@@ -98,6 +98,16 @@ export interface TaskMove {
   readonly at: number
 }
 
+export const TASK_EDIT_KINDS = ['title', 'notes-added', 'notes-changed', 'notes-removed'] as const
+export type TaskEditKind = (typeof TASK_EDIT_KINDS)[number]
+
+/** A saved change to a card's title or notes, and the column it was in at the time. */
+export interface TaskEdit {
+  readonly kind: TaskEditKind
+  readonly columnId: ColumnId
+  readonly at: number
+}
+
 export interface Column {
   readonly id: ColumnId
   readonly title: string
@@ -118,6 +128,8 @@ export interface ArchivedTask {
   readonly reason: ArchiveReason
   /** Every column it landed in, oldest first. */
   readonly moves: readonly TaskMove[]
+  /** Every title and notes change, oldest first. */
+  readonly edits: readonly TaskEdit[]
 }
 
 export interface ArchivePage {

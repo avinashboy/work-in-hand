@@ -55,10 +55,11 @@ describe('card titles in the database', () => {
     expect(backlog(rename('t2', 'Renamed')).map(({ id }) => id)).toEqual(['t1', 't2'])
   })
 
-  it('adds nothing to the card’s timeline', () => {
+  it('adds an edit to the card’s timeline, not a move', () => {
     rename('t1', 'Renamed')
 
     expect(db.query("SELECT 1 FROM task_moves WHERE task_id = 't1'")).toHaveLength(1)
+    expect(db.query("SELECT 1 FROM task_edits WHERE task_id = 't1'")).toHaveLength(1)
   })
 
   it('takes the new title into the history', () => {

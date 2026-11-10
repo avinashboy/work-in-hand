@@ -40,6 +40,7 @@ function deleteCardsCreatedBy(db: SqlDatabase, cutoff: number): void {
     const expired = 'SELECT id FROM tasks WHERE created_at <= ?'
     db.run(`DELETE FROM task_moves WHERE task_id IN (${expired})`, cutoff)
     db.run(`DELETE FROM task_notes WHERE task_id IN (${expired})`, cutoff)
+    db.run(`DELETE FROM task_edits WHERE task_id IN (${expired})`, cutoff)
     db.run('DELETE FROM tasks WHERE created_at <= ?', cutoff)
   })
 }

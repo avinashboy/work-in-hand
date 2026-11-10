@@ -180,7 +180,10 @@ curl -X POST "https://YOUR-SITE.workers.dev/api/tasks" \
 GET /api/tasks/:id
 ```
 
-Finds cards on the board and in History. The response is the [card object](#the-card-object) plus `moves`, oldest first, with every column the card has landed in.
+Finds cards on the board and in History. The response is the [card object](#the-card-object) plus two lists, each oldest first:
+
+- `moves`: every column the card has landed in.
+- `edits`: every saved change to its title or notes, with the column the card was in at the time. `kind` is `title`, `notes-added`, `notes-changed` or `notes-removed`. Creating a card adds no edit, and neither does a save that changes nothing. Edits made before this was added weren't recorded.
 
 ```json
 {
@@ -200,6 +203,10 @@ Finds cards on the board and in History. The response is the [card object](#the-
     "moves": [
       { "column": "review", "at": "2026-11-09T13:48:25.875Z" },
       { "column": "done", "at": "2026-11-09T13:48:26.989Z" }
+    ],
+    "edits": [
+      { "kind": "title", "column": "review", "at": "2026-11-09T13:48:26.120Z" },
+      { "kind": "notes-added", "column": "done", "at": "2026-11-09T13:48:27.400Z" }
     ]
   },
   "error": null
@@ -233,7 +240,7 @@ curl -X PATCH "https://YOUR-SITE.workers.dev/api/tasks/CARD_ID" \
   -d '{"title":"New name","column":"Done"}'
 ```
 
-`200 OK`, with the updated card and its `moves`. A card in History returns `409`.
+`200 OK`, with the updated card, its `moves` and its `edits`. A card in History returns `409`.
 
 ## Delete a card
 
@@ -262,7 +269,7 @@ Deleting a card that is already gone returns `404`. A client retrying after a ti
 POST /api/tasks/:id/archive
 ```
 
-Takes no body. The card must be in Done. `200 OK` returns the card with `archived: true`, `archiveReason: "confirmed"` and its `moves`. A card outside Done, or already in History, returns `409`.
+Takes no body. The card must be in Done. `200 OK` returns the card with `archived: true`, `archiveReason: "confirmed"`, its `moves` and its `edits`. A card outside Done, or already in History, returns `409`.
 
 ```bash
 curl -X POST "https://YOUR-SITE.workers.dev/api/tasks/CARD_ID/archive" \
