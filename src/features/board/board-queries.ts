@@ -3,6 +3,7 @@ import {
   queryOptions,
   useMutation,
   useMutationState,
+  useQuery,
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query'
@@ -12,7 +13,8 @@ import {
   getArchive,
   getBoard,
 } from './board-api'
-import type { Board, BoardCommand } from './board-model'
+import { DEMO_MAX_CARDS, IS_DEMO } from '../demo/demo-config'
+import type { Board, BoardCommand, BoardSnapshot } from './board-model'
 import { applyCommand } from './board-reducer'
 
 const BOARD_QUERY_KEY = ['board'] as const
@@ -41,8 +43,11 @@ export function useDeleteArchivedTask() {
 
   return useMutation({
     mutationFn: (taskId: string) => deleteArchivedTask({ data: taskId }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ARCHIVE_QUERY_KEY }),
+    onSuccess: () => {
+      // On the demo, a card in History still takes up room until it is deleted.
+      if (IS_DEMO) void queryClient.invalidateQueries({ queryKey: BOARD_QUERY_KEY })
+      return queryClient.invalidateQueries({ queryKey: ARCHIVE_QUERY_KEY })
+    },
   })
 }
 
@@ -63,7 +68,7 @@ export function useBoardCommand({
   const { mutate } = useMutation({
     mutationKey: BOARD_COMMAND_KEY,
     scope: { id: 'board' },
-    mutationFn: (command: BoardCommand): Promise<Board> =>
+    mutationFn: (command: BoardCommand): Promise<BoardSnapshot> =>
       applyBoardCommand({ data: command }),
     onMutate: () => queryClient.cancelQueries({ queryKey: BOARD_QUERY_KEY }),
     onSuccess: async (board) => {
@@ -114,4 +119,19 @@ export function usePendingTaskIds(): ReadonlySet<string> {
     () => new Set(pendingCommands.map(({ taskId }) => taskId)),
     [pendingCommands],
   )
+}
+
+/**
+ * How many more cards the demo will take, counting cards still being saved.
+ * Null on the private site, or while the count hasn't loaded: the server
+ * still refuses a card over the cap either way.
+ */
+export function useDemoRoomLeft(): number | null {
+  // The count arrives with every board, so this adds no request of its own.
+  const { data: board } = useQuery({ ...boardQueryOptions, enabled: IS_DEMO })
+  const pendingCreates = usePendingCommands().filter(({ type }) => type === 'create').length
+  const savedCount = board?.demoCardCount
+
+  if (!IS_DEMO || savedCount === undefined || savedCount === null) return null
+  return Math.max(0, DEMO_MAX_CARDS - savedCount - pendingCreates)
 }

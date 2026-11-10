@@ -4,7 +4,16 @@ A private Kanban board that runs entirely on Cloudflare. Drag cards between Back
 
 **Live demo:** https://tanstack-demo-public.ask1846.workers.dev
 
-The demo needs no login and is shared by everyone who opens it, so please don't add anything private. Cards are deleted 10 minutes after they're added, and there's room for 20 at a time. The API and login are switched off there.
+The demo needs no login and is shared by everyone who opens it, so please don't add anything private. Cards are deleted 10 minutes after they're added, and there's room for 9 at a time, counting History. Once 9 are in use, adding cards is turned off until the oldest one is deleted. The API and login are switched off there.
+
+> [!IMPORTANT]
+> **The public demo uses browser fingerprinting for safety.** Each visit and change on https://tanstack-demo-public.ask1846.workers.dev is logged with:
+>
+> - a browser fingerprint from the free, open-source [FingerprintJS](https://github.com/fingerprintjs/fingerprintjs)
+> - the device (for example iPhone, Android phone, Mac or Windows PC), system and browser, read from the user agent
+> - the date and time, and any text written on a card
+>
+> The log is kept in its own table, apart from the board, is never shown on the site, and is deleted after 30 days. The private site doesn't collect any of this.
 
 ## Screenshots
 

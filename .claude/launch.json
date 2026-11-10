@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000
+    },
+    {
+      "name": "tanstack-demo-public",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "dev", "--mode", "demo", "--port", "3001"],
+      "port": 3001
     }
   ]
 }

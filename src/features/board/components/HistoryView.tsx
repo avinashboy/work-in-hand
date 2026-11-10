@@ -3,7 +3,8 @@ import { Link } from '@tanstack/react-router'
 import { LogoutButton } from '../../auth/components/LogoutButton'
 import { DemoBanner } from '../../demo/components/DemoBanner'
 import { IS_DEMO } from '../../demo/demo-config'
-import { archiveQueryOptions, useDeleteArchivedTask } from '../board-queries'
+import { useDemoVisit } from '../../demo/use-demo-visit'
+import { archiveQueryOptions, useDeleteArchivedTask, useDemoRoomLeft } from '../board-queries'
 import { HistoryRow } from './HistoryRow'
 import { ThemeSwitch } from './ThemeSwitch'
 
@@ -14,10 +15,12 @@ interface HistoryViewProps {
 export function HistoryView({ page }: HistoryViewProps) {
   const { data } = useSuspenseQuery(archiveQueryOptions(page))
   const deletion = useDeleteArchivedTask()
+  const demoRoomLeft = useDemoRoomLeft()
+  useDemoVisit()
 
   return (
     <main className="board-page">
-      {IS_DEMO ? <DemoBanner /> : null}
+      {IS_DEMO ? <DemoBanner roomLeft={demoRoomLeft} /> : null}
       <header className="masthead">
         <h1>History</h1>
         <div className="masthead-meta">

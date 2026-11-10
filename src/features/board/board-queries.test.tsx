@@ -73,7 +73,7 @@ function setup(onFailure = vi.fn()) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { staleTime: Infinity } },
   })
-  queryClient.setQueryData(boardQueryOptions.queryKey, initialBoard)
+  queryClient.setQueryData(boardQueryOptions.queryKey, { ...initialBoard, demoCardCount: null })
 
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>

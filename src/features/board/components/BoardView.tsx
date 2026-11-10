@@ -9,6 +9,7 @@ import { Link } from '@tanstack/react-router'
 import { LogoutButton } from '../../auth/components/LogoutButton'
 import { DemoBanner } from '../../demo/components/DemoBanner'
 import { IS_DEMO } from '../../demo/demo-config'
+import { useDemoVisit } from '../../demo/use-demo-visit'
 import {
   createTaskId,
   type Board,
@@ -17,6 +18,7 @@ import {
 } from '../board-model'
 import {
   useBoardCommand,
+  useDemoRoomLeft,
   useOptimisticBoard,
   usePendingTaskIds,
 } from '../board-queries'
@@ -83,8 +85,12 @@ export function BoardView() {
       })),
   })
   const drag = useBoardDrag(board, send)
+  const demoRoomLeft = useDemoRoomLeft()
+  useDemoVisit()
+  const isBoardFull = demoRoomLeft === 0
 
   function createTask(columnId: ColumnId, title: string) {
+    if (isBoardFull) return
     send({
       type: 'create',
       taskId: createTaskId(),
@@ -98,7 +104,7 @@ export function BoardView() {
 
   return (
     <main className="board-page board-page-fit">
-      {IS_DEMO ? <DemoBanner /> : null}
+      {IS_DEMO ? <DemoBanner roomLeft={demoRoomLeft} /> : null}
       <header className="masthead">
         <h1>Work in Hand</h1>
         <div className="masthead-meta">
@@ -135,6 +141,7 @@ export function BoardView() {
               column={column}
               pendingTaskIds={pendingTaskIds}
               onCreate={createTask}
+              isAddingDisabled={isBoardFull}
               onDelete={(taskId) => send({ type: 'delete', taskId })}
               onConfirm={(taskId) => send({ type: 'archive', taskId })}
               onSaveTitle={(taskId, title) => send({ type: 'set-title', taskId, title })}

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { IS_SAFE_TEXT_REQUIRED, SAFE_TEXT_ERROR, SAFE_TEXT_PATTERN } from './safe-text'
 
 export const COLUMN_IDS = ['backlog', 'doing', 'review', 'done'] as const
 export const DONE_COLUMN_ID = 'done'
@@ -31,8 +32,13 @@ export function createTaskId(): string {
   )
 }
 
-export const taskTitleSchema = z.string().trim().min(1).max(MAX_TITLE_LENGTH)
-export const taskNotesSchema = z.string().max(MAX_NOTES_LENGTH)
+/** On the public demo, text must also pass the safe-text pattern. */
+function withSafeText(schema: z.ZodString): z.ZodString {
+  return IS_SAFE_TEXT_REQUIRED ? schema.regex(SAFE_TEXT_PATTERN, SAFE_TEXT_ERROR) : schema
+}
+
+export const taskTitleSchema = withSafeText(z.string().trim().min(1).max(MAX_TITLE_LENGTH))
+export const taskNotesSchema = withSafeText(z.string().max(MAX_NOTES_LENGTH))
 export const archivePageSchema = z.number().int().min(1).max(MAX_ARCHIVE_PAGE)
 
 /**
@@ -116,6 +122,15 @@ export interface Column {
 
 export interface Board {
   readonly columns: readonly Column[]
+}
+
+/** The board as the server sends it. */
+export interface BoardSnapshot extends Board {
+  /**
+   * Demo only: cards counted towards its cap, including History. Sent with
+   * every board so the page needs no extra request to know. Null elsewhere.
+   */
+  readonly demoCardCount: number | null
 }
 
 export interface ArchivedTask {

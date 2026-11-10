@@ -7,10 +7,17 @@ function contentSecurityPolicy(nonce: string): string {
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}'`,
+    // No onclick="…" style handlers in markup, ever.
+    "script-src-attr 'none'",
     // Drag and drop positions cards with inline style attributes.
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
+    "connect-src 'self'",
+    "font-src 'self'",
     "object-src 'none'",
+    "frame-src 'none'",
+    "worker-src 'self'",
+    "manifest-src 'self'",
     "base-uri 'none'",
     "form-action 'self'",
     "frame-ancestors 'none'",
@@ -24,7 +31,13 @@ export function applySecurityHeaders(): string {
   setResponseHeader('X-Content-Type-Options', 'nosniff')
   setResponseHeader('X-Frame-Options', 'DENY')
   setResponseHeader('Referrer-Policy', 'same-origin')
-  setResponseHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+  setResponseHeader(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+  )
+  // Keeps other sites' windows and pages from reaching into this one.
+  setResponseHeader('Cross-Origin-Opener-Policy', 'same-origin')
+  setResponseHeader('Cross-Origin-Resource-Policy', 'same-origin')
   // Pages hold private data, so shared caches and the back button mustn't keep them.
   setResponseHeader('Cache-Control', 'no-store')
 

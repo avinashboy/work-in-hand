@@ -16,6 +16,8 @@ interface BoardColumnProps {
   readonly onConfirm: (taskId: string) => void
   readonly onSaveTitle: (taskId: string, title: string) => void
   readonly onSaveNotes: (taskId: string, notes: string) => void
+  /** True when no more cards can be added. */
+  readonly isAddingDisabled?: boolean
 }
 
 export function BoardColumn({
@@ -26,6 +28,7 @@ export function BoardColumn({
   onConfirm,
   onSaveTitle,
   onSaveNotes,
+  isAddingDisabled = false,
 }: BoardColumnProps) {
   const { setNodeRef } = useDroppable({
     id: column.id,
@@ -88,6 +91,7 @@ export function BoardColumn({
       <AddTaskForm
         columnTitle={column.title}
         onSubmit={handleCreate}
+        isDisabled={isAddingDisabled}
       />
     </section>
   )

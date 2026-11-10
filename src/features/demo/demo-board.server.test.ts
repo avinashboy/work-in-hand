@@ -119,6 +119,26 @@ describe('demo board', () => {
     expect(() => board.apply(create('one-too-many'))).toThrow('full')
   })
 
+  it('caps the demo at 9 cards', () => {
+    expect(DEMO_MAX_CARDS).toBe(9)
+  })
+
+  it('counts cards on the board and in history', () => {
+    board.apply(create('a'))
+    board.apply(create('b', 'done'))
+    board.apply({ type: 'archive', taskId: 'b' })
+
+    expect(board.countCards()).toBe(2)
+  })
+
+  it('stops counting cards once they expire', () => {
+    board.apply(create('a'))
+
+    time = START + DEMO_CARD_LIFETIME_MS
+
+    expect(board.countCards()).toBe(0)
+  })
+
   it('makes room again once cards expire', () => {
     for (let index = 0; index < DEMO_MAX_CARDS; index += 1) {
       board.apply(create(`card-${index}`))

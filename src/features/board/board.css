@@ -163,6 +163,43 @@ body {
   font-weight: 500;
 }
 
+.demo-banner-stack {
+  margin: 0 0 1.25rem;
+}
+
+.demo-banner-stack .demo-banner {
+  margin: 0;
+}
+
+.demo-banner-stack .demo-privacy {
+  margin-top: 0.5rem;
+  border-style: dotted;
+  font-size: 0.72rem;
+}
+
+/* Empty until the demo fills up. Kept in the page (not display: none) so
+   screen readers announce the message when it appears. */
+.demo-full:empty {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.demo-full {
+  margin: 0.5rem 0 0;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--vermilion);
+  border-left-width: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.demo-full strong {
+  color: var(--vermilion);
+  font-weight: 600;
+}
+
 /* Columns */
 
 .columns {
@@ -561,7 +598,29 @@ body {
 
 .add-task {
   display: flex;
+  flex-wrap: wrap;
   border-top: 1px solid var(--rule);
+}
+
+/* Refused characters in a title or notes. */
+.text-error {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 0.45rem 0.9rem;
+  border-left: 3px solid var(--vermilion);
+  color: var(--vermilion);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.card-editor .text-error {
+  margin-top: 0.35rem;
+}
+
+:is(.add-task input, .card-editor input, .card-editor textarea)[aria-invalid='true'] {
+  outline: 2px solid var(--vermilion);
+  outline-offset: -2px;
 }
 
 .add-task input {
@@ -592,6 +651,19 @@ body {
 .add-task button:hover {
   background: var(--ink);
   color: var(--card);
+}
+
+.add-task[data-disabled='true'] {
+  opacity: 0.45;
+}
+
+.add-task :is(input, button):disabled {
+  cursor: not-allowed;
+}
+
+.add-task button:disabled:hover {
+  background: none;
+  color: var(--ink);
 }
 
 :is(.task-grab, .task-delete, .add-task input, .add-task button, .notice button):focus-visible {

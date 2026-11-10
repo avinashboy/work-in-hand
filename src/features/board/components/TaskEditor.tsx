@@ -1,5 +1,6 @@
 import { useId, useRef, useState, type FormEvent } from 'react'
 import { MAX_NOTES_LENGTH, MAX_TITLE_LENGTH, type Task } from '../board-model'
+import { describeUnsafeText } from '../safe-text'
 import { PencilIcon } from './icons'
 
 const NOTES_ROWS = 12
@@ -20,6 +21,11 @@ interface EditorFormProps {
 function EditorForm({ draft, onChange, onCancel, onSubmit, headingId }: EditorFormProps) {
   const titleId = useId()
   const notesId = useId()
+  const titleErrorId = useId()
+  const notesErrorId = useId()
+  const titleProblem = describeUnsafeText(draft.title)
+  const notesProblem = describeUnsafeText(draft.notes)
+  const canSave = draft.title.trim() !== '' && titleProblem === null && notesProblem === null
 
   return (
     <form onSubmit={onSubmit}>
@@ -31,7 +37,14 @@ function EditorForm({ draft, onChange, onCancel, onSubmit, headingId }: EditorFo
         maxLength={MAX_TITLE_LENGTH}
         value={draft.title}
         onChange={(event) => onChange({ ...draft, title: event.target.value })}
+        aria-invalid={titleProblem !== null}
+        aria-describedby={titleProblem === null ? undefined : titleErrorId}
       />
+      {titleProblem === null ? null : (
+        <p id={titleErrorId} className="text-error" role="alert">
+          {titleProblem}
+        </p>
+      )}
       <label htmlFor={notesId}>Notes</label>
       <textarea
         id={notesId}
@@ -39,12 +52,19 @@ function EditorForm({ draft, onChange, onCancel, onSubmit, headingId }: EditorFo
         maxLength={MAX_NOTES_LENGTH}
         value={draft.notes}
         onChange={(event) => onChange({ ...draft, notes: event.target.value })}
+        aria-invalid={notesProblem !== null}
+        aria-describedby={notesProblem === null ? undefined : notesErrorId}
       />
+      {notesProblem === null ? null : (
+        <p id={notesErrorId} className="text-error" role="alert">
+          {notesProblem}
+        </p>
+      )}
       <div className="card-editor-actions">
         <button type="button" onClick={onCancel}>
           Cancel
         </button>
-        <button type="submit" className="card-editor-save" disabled={draft.title.trim() === ''}>
+        <button type="submit" className="card-editor-save" disabled={!canSave}>
           Save
         </button>
       </div>
@@ -75,6 +95,7 @@ export function TaskEditor({ task, onSaveTitle, onSaveNotes }: TaskEditorProps) 
 
   function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (describeUnsafeText(draft.title) !== null || describeUnsafeText(draft.notes) !== null) return
     const title = draft.title.trim()
     if (title !== task.title) onSaveTitle(task.id, title)
     if (draft.notes !== task.notes) onSaveNotes(task.id, draft.notes)

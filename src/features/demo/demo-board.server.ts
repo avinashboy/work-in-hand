@@ -28,6 +28,8 @@ export interface DemoBoard extends BoardRepository {
   readonly deleteExpired: () => void
   /** When the oldest card is due to go, or null when there are no cards. */
   readonly nextExpiry: () => number | null
+  /** Cards counted towards the cap: those on the board and in History. */
+  readonly countCards: () => number
 }
 
 interface DemoBoardOptions {
@@ -58,11 +60,12 @@ function spendWrite(db: SqlDatabase, time: number): void {
   if (changed === 0) throw new Error('Demo daily limit reached')
 }
 
+function countAllCards(db: SqlDatabase): number {
+  return countRowSchema.parse(db.query('SELECT COUNT(*) AS total FROM tasks')[0]).total
+}
+
 function assertRoomForNewCard(db: SqlDatabase): void {
-  const { total } = countRowSchema.parse(
-    db.query('SELECT COUNT(*) AS total FROM tasks')[0],
-  )
-  if (total >= DEMO_MAX_CARDS) throw new Error('Demo board is full')
+  if (countAllCards(db) >= DEMO_MAX_CARDS) throw new Error('Demo board is full')
 }
 
 /**
@@ -96,6 +99,10 @@ export function createDemoBoard({ db, now }: DemoBoardOptions): DemoBoard {
     ...repository,
     deleteExpired,
     nextExpiry,
+    countCards: () => {
+      deleteExpired()
+      return countAllCards(db)
+    },
     get: () => {
       deleteExpired()
       return repository.get()
