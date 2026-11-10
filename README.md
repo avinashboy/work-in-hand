@@ -4,7 +4,7 @@ A private Kanban board that runs entirely on Cloudflare. Drag cards between Back
 
 **Live demo:** https://tanstack-demo-public.ask1846.workers.dev
 
-The demo needs no login and is shared by everyone who opens it, so please don't add anything private. Cards are deleted 10 minutes after they're added, and there's room for 9 at a time, counting History. Once 9 are in use, adding cards is turned off until the oldest one is deleted. The API and login are switched off there.
+The demo needs no login and is shared by everyone who opens it, so please don't add anything private. Cards are deleted 10 minutes after they're added, and there's room for 9 at a time, counting History. Once 9 are in use, adding cards is turned off until the oldest one is deleted. The API, the MCP server and login are switched off there.
 
 > [!IMPORTANT]
 > **The public demo uses browser fingerprinting for safety.** Each visit and change on https://tanstack-demo-public.ask1846.workers.dev is logged with:
@@ -34,6 +34,7 @@ The demo needs no login and is shared by everyone who opens it, so please don't 
 - Light and dark themes
 - Password login that stays signed in for a year
 - A [REST API](docs/API.md) with filters, for voice commands, scripts and dashboards
+- An [MCP server](docs/MCP.md) at `/mcp`, so AI agents such as Claude, Cursor and VS Code can read and change cards
 
 ## Built with
 
@@ -142,4 +143,5 @@ The next build clears `dist`, so repeat step 2 after rebuilding.
 ## Documentation
 
 - [API reference](docs/API.md): for connecting other apps
+- [Connecting AI agents](docs/MCP.md): MCP setup for Claude, Cursor, VS Code and others
 - [Code guide](docs/ARCHITECTURE.md): how the code is organised and how to change it

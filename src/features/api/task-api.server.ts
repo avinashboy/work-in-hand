@@ -10,11 +10,13 @@ const RETRY_AFTER_SECONDS = '60'
 
 const apiKeyEnvSchema = z.object({ API_KEY: z.string().min(MIN_API_KEY_LENGTH) })
 
-export interface TaskApiOptions extends TaskApiStore {
+export interface ApiAccessOptions {
   /** Null when no usable key is set, which refuses every call. */
   readonly apiKey: string | null
   readonly isWithinRateLimit: (client: string) => Promise<boolean>
 }
+
+export interface TaskApiOptions extends ApiAccessOptions, TaskApiStore {}
 
 export function isTaskApiRequest(request: Request): boolean {
   return isApiPath(new URL(request.url).pathname)
@@ -31,10 +33,10 @@ async function hasValidKey(request: Request, apiKey: string): Promise<boolean> {
   return isSecretCorrect(match[1], apiKey)
 }
 
-/** Returns the refusal to send, or null when the request may continue. */
-async function refuseIfOverLimit(
+/** Returns the refusal to send, or null when the caller is within the rate limit. */
+export async function refuseIfOverLimit(
   request: Request,
-  options: TaskApiOptions,
+  options: ApiAccessOptions,
 ): Promise<Response | null> {
   try {
     return (await options.isWithinRateLimit(clientKey(request)))
@@ -47,21 +49,30 @@ async function refuseIfOverLimit(
 }
 
 /**
- * Entry point for the public API. The rate limit comes before the key check so
- * guessing keys is throttled too. Documented in docs/API.md.
+ * Shared by the REST API and the MCP server. Returns the refusal to send, or
+ * null when the caller may continue. The rate limit comes before the key check
+ * so guessing keys is throttled too.
  */
+export async function checkApiAccess(
+  request: Request,
+  options: ApiAccessOptions,
+): Promise<Response | null> {
+  const refusal = await refuseIfOverLimit(request, options)
+  if (refusal) return refusal
+  if (options.apiKey === null) return fail(503, 'The API is not set up yet')
+  if (!(await hasValidKey(request, options.apiKey))) {
+    return fail(401, 'Missing or invalid API key', { 'www-authenticate': 'Bearer' })
+  }
+  return null
+}
+
+/** Entry point for the public API. Documented in docs/API.md. */
 export async function handleTaskApi(
   request: Request,
   options: TaskApiOptions,
 ): Promise<Response> {
   try {
-    const refusal = await refuseIfOverLimit(request, options)
-    if (refusal) return refusal
-    if (options.apiKey === null) return fail(503, 'The API is not set up yet')
-    if (!(await hasValidKey(request, options.apiKey))) {
-      return fail(401, 'Missing or invalid API key', { 'www-authenticate': 'Bearer' })
-    }
-    return await routeTaskApi(request, options)
+    return (await checkApiAccess(request, options)) ?? (await routeTaskApi(request, options))
   } catch (error) {
     console.error('Could not process the API request:', error)
     return fail(500, 'Something went wrong')

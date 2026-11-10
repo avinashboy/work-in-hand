@@ -2,6 +2,8 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "tanstack-demo",
   "compatibility_date": "2026-11-08",
+  // The MCP server's libraries use Node's AsyncLocalStorage.
+  "compatibility_flags": ["nodejs_compat"],
   "main": "src/server.ts",
   "upload_source_maps": true,
   "observability": {

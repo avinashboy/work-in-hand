@@ -6,6 +6,7 @@ import { parsePassword } from './features/auth/password-session.server'
 import { getLoginAttempts, getTaskApiStore } from './features/board/board-store.server'
 import { IS_DEMO } from './features/demo/demo-config'
 import { checkDemoRequest } from './features/demo/demo-gate.server'
+import { isMcpRequest } from './features/mcp/mcp-path'
 
 export { BoardStore } from './features/board/board-store.server'
 
@@ -24,18 +25,28 @@ function checkDemoLimits(request: Request): Promise<Response | null> {
   })
 }
 
+function apiAccess() {
+  return {
+    apiKey: parseApiKey(env),
+    isWithinRateLimit: (client: string) => isWithinLimit(env.API_RATE_LIMITER, client),
+  }
+}
+
+/** Loaded only when an MCP client calls, so ordinary page loads stay lean. */
+async function handleMcp(request: Request, context: ExecutionContext): Promise<Response> {
+  const { handleMcpRequest } = await import('./features/mcp/mcp-endpoint.server')
+  return handleMcpRequest(request, { ...apiAccess(), store: getTaskApiStore() }, context)
+}
+
 export default {
-  async fetch(request: Request): Promise<Response> {
+  async fetch(request: Request, _env: unknown, context: ExecutionContext): Promise<Response> {
     if (IS_DEMO) return (await checkDemoLimits(request)) ?? handler.fetch(request)
 
-    // Checked first: outside apps use an API key instead of the login session.
+    // Checked first: outside apps and agents use an API key instead of the login session.
     if (isTaskApiRequest(request)) {
-      return handleTaskApi(request, {
-        apiKey: parseApiKey(env),
-        isWithinRateLimit: (client) => isWithinLimit(env.API_RATE_LIMITER, client),
-        ...getTaskApiStore(),
-      })
+      return handleTaskApi(request, { ...apiAccess(), ...getTaskApiStore() })
     }
+    if (isMcpRequest(request)) return handleMcp(request, context)
 
     if (canSkipLogin(import.meta.env.DEV, request)) return handler.fetch(request)
 

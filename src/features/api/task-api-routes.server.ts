@@ -2,7 +2,6 @@ import type { z } from 'zod'
 import { taskIdSchema, type ColumnId, type Task } from '../board/board-model'
 import type { TaskPatch } from '../board/board-task-operations.server'
 import type {
-  StoredTask,
   StoredTaskDetail,
   TaskChange,
   TaskListPage,
@@ -10,6 +9,7 @@ import type {
   TaskSummary,
 } from '../board/board-task-queries.server'
 import { isBodyWithinLimit } from '../auth/request-limits'
+import { CHANGE_REFUSALS, NO_SUCH_CARD, toApiTask, toApiTaskDetail } from './task-api-format'
 import { fail, succeed } from './task-api-response'
 import {
   createTaskRequestSchema,
@@ -21,7 +21,6 @@ import {
 const TASKS_PATH = '/api/tasks'
 const SUMMARY_PATH = '/api/summary'
 const TASK_PATH = /^\/api\/tasks\/([^/]+)(\/archive)?$/
-const NO_SUCH_CARD = 'No card with that id'
 
 export interface NewApiTask {
   readonly columnId: ColumnId
@@ -47,34 +46,6 @@ export function isApiPath(pathname: string): boolean {
   return pathname === TASKS_PATH || pathname === SUMMARY_PATH || pathname.startsWith(`${TASKS_PATH}/`)
 }
 
-function toIso(time: number | null): string | null {
-  return time === null ? null : new Date(time).toISOString()
-}
-
-function toApiTask(task: StoredTask) {
-  return {
-    id: task.id,
-    title: task.title,
-    notes: task.notes,
-    column: task.columnId,
-    status: task.doneAt === null ? 'ongoing' : 'completed',
-    archived: task.archivedAt !== null,
-    archiveReason: task.archiveReason,
-    createdAt: toIso(task.createdAt),
-    movedAt: toIso(task.movedAt),
-    doneAt: toIso(task.doneAt),
-    archivedAt: toIso(task.archivedAt),
-  }
-}
-
-function toApiTaskDetail(task: StoredTaskDetail) {
-  return {
-    ...toApiTask(task),
-    moves: task.moves.map(({ columnId, at }) => ({ column: columnId, at: toIso(at) })),
-    edits: task.edits.map(({ kind, columnId, at }) => ({ kind, column: columnId, at: toIso(at) })),
-  }
-}
-
 /** Returns the parsed body, or the refusal to send. */
 async function readBody<Schema extends z.ZodType>(
   request: Request,
@@ -91,16 +62,8 @@ async function readBody<Schema extends z.ZodType>(
 }
 
 function respondToChange(change: TaskChange): Response {
-  switch (change.outcome) {
-    case 'changed':
-      return succeed(toApiTaskDetail(change.task))
-    case 'missing':
-      return fail(404, NO_SUCH_CARD)
-    case 'history':
-      return fail(409, "That card is in History and can't be changed")
-    case 'not-done':
-      return fail(409, 'Only cards in Done can be moved to History')
-  }
+  if (change.outcome === 'changed') return succeed(toApiTaskDetail(change.task))
+  return fail(change.outcome === 'missing' ? 404 : 409, CHANGE_REFUSALS[change.outcome])
 }
 
 function tasksRoutes(store: TaskApiStore): Routes {

@@ -10,7 +10,10 @@ One Cloudflare Worker serves everything. All data lives in one SQLite-backed Dur
 flowchart TD
     A[Browser] --> W
     B[Voice app or dashboard] --> W
+    C[AI agent: Claude, ChatGPT, Cursor, VS Code] --> W
     W["src/server.ts<br/>Worker entry"] -->|"/api/tasks*, /api/summary"| API["features/api<br/>API key and rate limit"]
+    W -->|"/mcp"| MCP["features/mcp<br/>MCP tools"]
+    MCP -->|same key and limit| API
     W -->|everything else| GATE["features/auth<br/>login gate"]
     GATE -->|signed in| START["TanStack Start<br/>pages and server functions"]
     START --> DO
@@ -22,9 +25,12 @@ flowchart TD
 `src/server.ts` decides the route in this order:
 
 1. API paths go to `handleTaskApi`, which uses the API key and never the login.
-2. `npm run dev` on `localhost` skips the login.
-3. `checkRequest` handles login and logout, and turns away anyone without a valid session.
-4. Everything else goes to TanStack Start.
+2. `/mcp` goes to `handleMcpRequest`, with the same key and rate limit. Its code loads only when an MCP client calls.
+3. `npm run dev` on `localhost` skips the login.
+4. `checkRequest` handles login and logout, and turns away anyone without a valid session.
+5. Everything else goes to TanStack Start.
+
+The public demo skips all of this: it has no API, no MCP and no login.
 
 ## Folders
 
@@ -36,6 +42,7 @@ flowchart TD
 | `src/features/board/` | The board: model, reducer, storage, UI |
 | `src/features/auth/` | Password login, session cookie, attempt limits |
 | `src/features/api/` | The public REST API |
+| `src/features/mcp/` | The MCP server for AI agents |
 | `src/lib/` | The small SQL interface and its two implementations |
 
 `*.server.ts` files only run on the server. Tests sit next to the file they cover.
@@ -83,8 +90,9 @@ Things to know:
 
 | File | Job |
 |---|---|
-| `task-api.server.ts` | Rate limit, API key, and the catch-all for errors |
-| `task-api-routes.server.ts` | Paths, methods, handlers, and the JSON shape of a card |
+| `task-api.server.ts` | Rate limit, API key (`checkApiAccess`, shared with MCP), and the catch-all for errors |
+| `task-api-routes.server.ts` | Paths, methods and handlers |
+| `task-api-format.ts` | The JSON shape of a card and the refusal messages, shared with MCP |
 | `task-api-schemas.ts` | Validation, column names, filters |
 | `task-api-response.ts` | The `{success, data, error}` envelope |
 | `board-task-queries.server.ts` | Filtered lists, single card, summary |
@@ -101,6 +109,28 @@ API changes go through the same commands as the UI, so both follow the same rule
 3. Expose it as a method on `BoardStore`, in `getTaskApiStore`, and on `TaskApiStore`.
 4. Add the route in `routesFor`. If the path is new, also update `isApiPath`, or the request goes to the login gate.
 5. Update [API.md](API.md).
+6. If agents should use it too, add an MCP tool (see below).
+
+## The MCP server
+
+A stateless [Model Context Protocol](https://modelcontextprotocol.io) server at `/mcp`, over Streamable HTTP, built with `createMcpHandler` from the Cloudflare Agents SDK. Each request gets a fresh server, so nothing is kept between calls. How to connect clients is in [MCP.md](MCP.md).
+
+| File | Job |
+|---|---|
+| `mcp-path.ts` | The `/mcp` path check, kept apart so `server.ts` doesn't load the MCP libraries |
+| `mcp-endpoint.server.ts` | Rate limit and API key (via `checkApiAccess`), body size limit, then the MCP handler |
+| `mcp-server.ts` | Registers each tool with its title, description and hints (`readOnlyHint`, `destructiveHint`) |
+| `mcp-schemas.ts` | Each tool's input as a plain JSON shape, for agents to read |
+| `mcp-tools.ts` | What each tool does. Checks input again with the REST API's schemas, then calls `TaskApiStore` |
+
+Tools return the card as JSON text and as `structuredContent`. Refusals come back as tool errors (`isError`) with the same wording as the REST API. The libraries need the `nodejs_compat` flag in `wrangler.jsonc`.
+
+### Adding a tool
+
+1. Write the tests in `mcp-tools.test.ts`.
+2. Add its input in `mcp-schemas.ts` and its handler in `createBoardToolHandlers`.
+3. Register it in `createBoardMcpServer`, with clear wording and the right hints.
+4. Add it to the tool list in `mcp-endpoint.server.test.ts` and [MCP.md](MCP.md).
 
 ## Sign-in
 
