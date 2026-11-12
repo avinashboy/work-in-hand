@@ -17,7 +17,7 @@ import {
 } from './board-archive-actors.server'
 import { readEdits } from './board-edits.server'
 
-export const TASK_SORTS = ['createdAt', 'movedAt', 'doneAt', 'title'] as const
+export const TASK_SORTS = ['createdAt', 'movedAt', 'doneAt', 'archivedAt', 'title'] as const
 export type TaskSort = (typeof TASK_SORTS)[number]
 
 export interface TaskQuery {
@@ -30,6 +30,9 @@ export interface TaskQuery {
   readonly createdBefore: number | null
   readonly doneAfter: number | null
   readonly doneBefore: number | null
+  /** When the card moved to History; either bound leaves out cards still on the board. */
+  readonly archivedAfter: number | null
+  readonly archivedBefore: number | null
   readonly sort: TaskSort
   readonly order: 'asc' | 'desc'
   readonly page: number
@@ -80,6 +83,7 @@ const SORT_COLUMNS: Readonly<Record<TaskSort, string>> = {
   createdAt: 't.created_at',
   movedAt: 't.moved_at',
   doneAt: 't.done_at',
+  archivedAt: 't.archived_at',
   title: 't.title COLLATE NOCASE',
 }
 
@@ -174,6 +178,8 @@ function filterClauses(query: TaskQuery): readonly Clause[] {
     ...boundClauses('t.created_at', '<', query.createdBefore),
     ...boundClauses('t.done_at', '>=', query.doneAfter),
     ...boundClauses('t.done_at', '<', query.doneBefore),
+    ...boundClauses('t.archived_at', '>=', query.archivedAfter),
+    ...boundClauses('t.archived_at', '<', query.archivedBefore),
   ]
 }
 

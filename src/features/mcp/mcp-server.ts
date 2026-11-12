@@ -66,7 +66,9 @@ export function createBoardMcpServer(
     {
       title: 'List cards',
       description:
-        'Find cards on the board or in History. Filter by status, column, words, or dates; results come in pages.' +
+        'Find cards on the board or in History. Filter by status, column, words, or dates; results come in pages. ' +
+        'For "what moved to History in November 2025", send year 2025 and month 11; ' +
+        'for "the last 7 days", "the last 2 weeks" or "the last 5 months", send within "7d", "2w" or "5m".' +
         UNTRUSTED_TEXT,
       inputSchema: listTasksInput,
       annotations: READ_ONLY,

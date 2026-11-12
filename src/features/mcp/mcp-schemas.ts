@@ -28,7 +28,30 @@ export const listTasksInput = z.object({
   createdBefore: date.optional(),
   doneAfter: date.optional(),
   doneBefore: date.optional(),
-  sort: z.enum(TASK_SORTS).optional().describe('Defaults to createdAt'),
+  archivedAfter: date.optional().describe(`Moved to History at or after this time. ${DATE_HELP}`),
+  archivedBefore: date.optional().describe(`Moved to History before this time. ${DATE_HELP}`),
+  year: z
+    .number()
+    .int()
+    .optional()
+    .describe(
+      'Only cards that moved to History in this year (UTC), such as 2025. Sorted newest first unless sort is given',
+    ),
+  month: z
+    .union([z.number().int(), z.string().max(20)])
+    .optional()
+    .describe('With year: only that month, as 1 to 12 or a name like "November" or "Nov"'),
+  within: z
+    .string()
+    .max(20)
+    .optional()
+    .describe(
+      'Only cards that moved to History in the last few days, weeks or months, counted back from now: any number, such as "7d", "30d", "2w", "3w", "5m" or "7m". Sorted newest first unless sort is given',
+    ),
+  sort: z
+    .enum(TASK_SORTS)
+    .optional()
+    .describe('Defaults to createdAt, or archivedAt when year or within is given'),
   order: z.enum(['asc', 'desc']).optional().describe('Defaults to desc, newest first'),
   page: z.number().int().optional().describe('Starts at 1'),
   limit: z.number().int().optional().describe('Cards per page, 1 to 200. Defaults to 50'),

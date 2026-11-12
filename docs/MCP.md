@@ -20,7 +20,7 @@ The server introduces itself as **Work in Hand**, with a small board logo. Clien
 
 | Tool | What it does | Changes the board |
 |---|---|---|
-| `list_tasks` | Find cards by status, column, words or dates, in pages | No |
+| `list_tasks` | Find cards by status, column, words or dates, in pages. `year` and `month` list a month or year of History, for example "what moved to History in November 2025". `within` lists the last few days, weeks or months, such as "the last 30 days" or "the last 3 weeks" | No |
 | `get_task` | One card with its notes and timeline of moves and edits | No |
 | `get_board_summary` | Card counts per column, ongoing, completed and in History | No |
 | `create_task` | Add a card to Backlog, In progress or In review | Yes |

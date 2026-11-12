@@ -7,6 +7,17 @@ import {
 } from '../board/board-model'
 import type { TaskPatch } from '../board/board-task-operations.server'
 import { TASK_SORTS, type TaskQuery } from '../board/board-task-queries.server'
+import {
+  MONTH_NEEDS_YEAR,
+  PERIOD_CONFLICTS,
+  WITHIN_CONFLICTS,
+  monthSchema,
+  periodRange,
+  withinSchema,
+  withinStart,
+  yearSchema,
+  type Within,
+} from './task-api-period'
 
 const MAX_SEARCH_LENGTH = 200
 const MAX_PAGE = 1_000_000
@@ -73,6 +84,22 @@ const columnListSchema = z
   .pipe(z.array(anyColumnSchema))
   .transform((columns) => [...new Set(columns)])
 
+interface PeriodQuery {
+  readonly year?: number
+  readonly month?: number
+  readonly within?: Within
+}
+
+/** When `within` or a year asks for a stretch of History: its start and end, or null. */
+function historyPeriod({
+  year,
+  month,
+  within,
+}: PeriodQuery): { after: number; before: number | null } | null {
+  if (within !== undefined) return { after: withinStart(within, Date.now()), before: null }
+  return year === undefined ? null : periodRange(year, month ?? null)
+}
+
 /** Strict, so a misspelt filter is refused instead of silently returning everything. */
 export const listTasksQuerySchema = z
   .strictObject({
@@ -84,27 +111,49 @@ export const listTasksQuerySchema = z
     createdBefore: dateSchema.optional(),
     doneAfter: dateSchema.optional(),
     doneBefore: dateSchema.optional(),
-    sort: z.enum(TASK_SORTS).default('createdAt'),
+    archivedAfter: dateSchema.optional(),
+    archivedBefore: dateSchema.optional(),
+    year: yearSchema.optional(),
+    month: monthSchema.optional(),
+    within: withinSchema.optional(),
+    sort: z.enum(TASK_SORTS).optional(),
     order: z.enum(['asc', 'desc']).default('desc'),
     page: z.coerce.number().int().min(1).max(MAX_PAGE).default(1),
     limit: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
   })
-  .transform(
-    (query): TaskQuery => ({
+  .superRefine((query, context) => {
+    if (query.month !== undefined && query.year === undefined) {
+      context.addIssue({ code: 'custom', message: MONTH_NEEDS_YEAR })
+    }
+    const hasOwnRange =
+      query.archivedAfter !== undefined || query.archivedBefore !== undefined || query.archived === 'false'
+    if (query.within !== undefined && (hasOwnRange || query.year !== undefined)) {
+      context.addIssue({ code: 'custom', message: WITHIN_CONFLICTS })
+    } else if (query.year !== undefined && hasOwnRange) {
+      context.addIssue({ code: 'custom', message: PERIOD_CONFLICTS })
+    }
+  })
+  .transform((query): TaskQuery => {
+    // A year, month or `within` means "what moved to History then", newest first unless a sort is chosen.
+    const period = historyPeriod(query)
+    const archived = query.archived === undefined ? null : query.archived === 'true'
+    return {
       status: query.status,
       columns: query.column,
-      archived: query.archived === undefined ? null : query.archived === 'true',
+      archived: period ? true : archived,
       search: query.search ?? null,
       createdAfter: query.createdAfter ?? null,
       createdBefore: query.createdBefore ?? null,
       doneAfter: query.doneAfter ?? null,
       doneBefore: query.doneBefore ?? null,
-      sort: query.sort,
+      archivedAfter: period ? period.after : (query.archivedAfter ?? null),
+      archivedBefore: period ? period.before : (query.archivedBefore ?? null),
+      sort: query.sort ?? (period ? 'archivedAt' : 'createdAt'),
       order: query.order,
       page: query.page,
       limit: query.limit,
-    }),
-  )
+    }
+  })
 
 export function describeProblem(error: z.ZodError): string {
   const [issue] = error.issues

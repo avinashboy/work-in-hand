@@ -105,7 +105,12 @@ GET /api/tasks
 | `createdBefore` | Created before this time | none |
 | `doneAfter` | Reached Done at or after this time | none |
 | `doneBefore` | Reached Done before this time | none |
-| `sort` | `createdAt`, `movedAt`, `doneAt`, `title` | `createdAt` |
+| `archivedAfter` | Moved to History at or after this time | none |
+| `archivedBefore` | Moved to History before this time | none |
+| `year` | Moved to History in this year, such as `2025`. Implies `archived=true` | none |
+| `month` | With `year`: only that month, as `1` to `12` or a name like `november` or `nov` (case does not matter) | whole year |
+| `within` | Moved to History in the last few days, weeks or months, counted back from now: `7d`, `2w`, `3w`, `5m`, `7m`. Implies `archived=true` | none |
+| `sort` | `createdAt`, `movedAt`, `doneAt`, `archivedAt`, `title` | `createdAt`, or `archivedAt` with `year` or `within` |
 | `order` | `desc`, `asc` | `desc` |
 | `page` | Page number, from 1 | `1` |
 | `limit` | Cards per page, 1 to 200 | `50` |
@@ -114,7 +119,29 @@ Times look like `2026-11-09` (midnight UTC), `2026-11-09T14:30:00Z`, or a time w
 
 Filters combine, so a card must match all of them. An unknown or misspelt filter returns `400`. If a filter is repeated, the last one counts.
 
-When sorting by `doneAt`, cards that aren't done come last with `desc` and first with `asc`.
+When sorting by `doneAt`, cards that aren't done come last with `desc` and first with `asc`. The same goes for `archivedAt` and cards still on the board.
+
+### A month or year of History
+
+`year` and `month` answer "what moved to History in November 2025". Like the other times, they count in UTC: `year=2025&month=11` means from `2025-11-01` up to, but not including, `2025-12-01`. Leave out `month` for January to December. Results come newest first unless you choose a `sort`, and other filters such as `search` still apply.
+
+`month` needs a `year`. A `year` can't be combined with `archivedAfter`, `archivedBefore` or `archived=false`, so those return `400`.
+
+```bash
+curl "https://YOUR-SITE.workers.dev/api/tasks?year=2025&month=november&search=invoice"   -H "Authorization: Bearer YOUR_KEY"
+```
+
+### The last few days or months of History
+
+`within` answers "what moved to History in the last 7 days" or "the last 3 weeks". Write any number of days, weeks or months: `7d`, `30d`, `2w`, `3w`, `5m` or `7m` (`3 weeks` and `5 months` work too), up to 3650 days or 120 months. Days and weeks count back in whole 24 hours from the moment of the request, so `2w` is the same as `14d`. Months go back to the same day of the month, like History's own "Last 3 months". Results come newest first unless you choose a `sort`.
+
+The History page offers 7 days, 30 days and 3, 6 or 12 months, but the API takes any of these amounts.
+
+`within` can't be combined with `year`, `month`, `archivedAfter`, `archivedBefore` or `archived=false`.
+
+```bash
+curl "https://YOUR-SITE.workers.dev/api/tasks?within=30d"   -H "Authorization: Bearer YOUR_KEY"
+```
 
 Lists leave out each card's timeline. Use [Get a card](#get-a-card) for that.
 

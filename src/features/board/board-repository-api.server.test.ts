@@ -28,6 +28,8 @@ const allTasks: TaskQuery = {
   createdBefore: null,
   doneAfter: null,
   doneBefore: null,
+  archivedAfter: null,
+  archivedBefore: null,
   sort: 'createdAt',
   order: 'desc',
   page: 1,
@@ -125,6 +127,23 @@ describe('board repository for the API', () => {
       expect(ids({ doneAfter: finished.doneAt ?? 0, doneBefore: (finished.doneAt ?? 0) + 1 })).toEqual([
         'finished',
       ])
+    })
+
+    it('filters by when cards moved to History', () => {
+      const [filed] = list({ archived: true }).tasks
+      const at = filed.archivedAt ?? 0
+
+      expect(ids({ archivedAfter: at, archivedBefore: at + 1 })).toEqual(['filed'])
+      expect(ids({ archivedAfter: at + 1 })).toEqual([])
+      expect(ids({ archivedBefore: at })).toEqual([])
+    })
+
+    it('sorts by when cards moved to History', () => {
+      add('filed-later')
+      archive('filed-later')
+
+      expect(ids({ archived: true, sort: 'archivedAt' })).toEqual(['filed-later', 'filed'])
+      expect(ids({ archived: true, sort: 'archivedAt', order: 'asc' })).toEqual(['filed', 'filed-later'])
     })
 
     it('sorts by a chosen field and direction', () => {

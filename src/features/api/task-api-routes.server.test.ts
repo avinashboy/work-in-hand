@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { StoredTaskDetail, TaskChange } from '../board/board-task-queries.server'
 import { handleTaskApi, isTaskApiRequest, type TaskApiOptions } from './task-api.server'
 
@@ -87,6 +87,8 @@ const defaults = {
   createdBefore: null,
   doneAfter: null,
   doneBefore: null,
+  archivedAfter: null,
+  archivedBefore: null,
   sort: 'createdAt',
   order: 'desc',
   page: 1,
@@ -184,6 +186,8 @@ describe('GET /api/tasks', () => {
       createdBefore: '2026-11-02T10:00:00Z',
       doneAfter: '2026-11-03',
       doneBefore: '2026-11-04',
+      archivedAfter: '2026-11-05',
+      archivedBefore: '2026-11-06',
       sort: 'title',
       order: 'asc',
       page: '2',
@@ -201,10 +205,113 @@ describe('GET /api/tasks', () => {
       createdBefore: Date.UTC(2026, 10, 2, 10),
       doneAfter: Date.UTC(2026, 10, 3),
       doneBefore: Date.UTC(2026, 10, 4),
+      archivedAfter: Date.UTC(2026, 10, 5),
+      archivedBefore: Date.UTC(2026, 10, 6),
       sort: 'title',
       order: 'asc',
       page: 2,
       limit: 10,
+    })
+  })
+
+  it('reads a year and month as that month in History, newest first', async () => {
+    const api = options()
+
+    await send(call('GET', '/api/tasks?year=2025&month=11'), api)
+
+    expect(api.listTasks).toHaveBeenCalledWith({
+      ...defaults,
+      archived: true,
+      archivedAfter: Date.UTC(2025, 10, 1),
+      archivedBefore: Date.UTC(2025, 11, 1),
+      sort: 'archivedAt',
+    })
+  })
+
+  it.each(['november', 'Nov', 'NOVEMBER'])('takes the month by name: %s', async (month) => {
+    const api = options()
+
+    await send(call('GET', `/api/tasks?year=2025&month=${month}`), api)
+
+    expect(api.listTasks).toHaveBeenCalledWith(
+      expect.objectContaining({
+        archivedAfter: Date.UTC(2025, 10, 1),
+        archivedBefore: Date.UTC(2025, 11, 1),
+      }),
+    )
+  })
+
+  it('reads a year alone as January to December, rolling December into the next year', async () => {
+    const api = options()
+
+    await send(call('GET', '/api/tasks?year=2025'), api)
+    await send(call('GET', '/api/tasks?year=2025&month=12'), api)
+
+    expect(api.listTasks).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ archivedAfter: Date.UTC(2025, 0, 1), archivedBefore: Date.UTC(2026, 0, 1) }),
+    )
+    expect(api.listTasks).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ archivedAfter: Date.UTC(2025, 11, 1), archivedBefore: Date.UTC(2026, 0, 1) }),
+    )
+  })
+
+  it('keeps a chosen sort and other filters with a year and month', async () => {
+    const api = options()
+
+    await send(call('GET', '/api/tasks?year=2025&month=11&search=invoice&sort=title&order=asc'), api)
+
+    expect(api.listTasks).toHaveBeenCalledWith(
+      expect.objectContaining({ search: 'invoice', sort: 'title', order: 'asc', archived: true }),
+    )
+  })
+
+  describe('within: the last few days or months of History', () => {
+    const NOW = Date.UTC(2026, 10, 12, 9, 30)
+    const DAY = 24 * 60 * 60 * 1000
+
+    beforeEach(() => {
+      vi.useFakeTimers()
+      vi.setSystemTime(NOW)
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it.each([
+      ['7d', NOW - 7 * DAY],
+      ['30d', NOW - 30 * DAY],
+      ['30 days', NOW - 30 * DAY],
+      ['1day', NOW - DAY],
+      ['2w', NOW - 14 * DAY],
+      ['3 weeks', NOW - 21 * DAY],
+      ['1week', NOW - 7 * DAY],
+    ])('counts ?within=%s back from now, newest first', async (within, after) => {
+      const api = options()
+
+      await send(call('GET', `/api/tasks?within=${encodeURIComponent(within)}`), api)
+
+      expect(api.listTasks).toHaveBeenCalledWith({
+        ...defaults,
+        archived: true,
+        archivedAfter: after,
+        sort: 'archivedAt',
+      })
+    })
+
+    it.each([
+      ['3m', Date.UTC(2026, 7, 12, 9, 30)],
+      ['12 months', Date.UTC(2025, 10, 12, 9, 30)],
+      ['5m', Date.UTC(2026, 5, 12, 9, 30)],
+      ['7 months', Date.UTC(2026, 3, 12, 9, 30)],
+    ])('counts ?within=%s back by calendar months', async (within, after) => {
+      const api = options()
+
+      await send(call('GET', `/api/tasks?within=${encodeURIComponent(within)}`), api)
+
+      expect(api.listTasks).toHaveBeenCalledWith(expect.objectContaining({ archivedAfter: after }))
     })
   })
 
@@ -226,6 +333,23 @@ describe('GET /api/tasks', () => {
     'createdAfter=yesterday',
     'doneBefore=2026-13-45',
     'sort=password',
+    'archivedAfter=soon',
+    'year=25',
+    'year=abc',
+    'month=11',
+    'year=2025&month=13',
+    'year=2025&month=0',
+    'year=2025&month=smarch',
+    'year=2025&archivedAfter=2025-01-01',
+    'year=2025&archived=false',
+    'within=soon',
+    'within=0d',
+    'within=7y',
+    'within=600w',
+    'within=99999d',
+    'within=7d&year=2025',
+    'within=7d&archivedAfter=2026-01-01',
+    'within=7d&archived=false',
     'order=sideways',
     'page=0',
     'page=abc',

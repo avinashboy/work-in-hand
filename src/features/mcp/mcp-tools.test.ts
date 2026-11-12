@@ -85,6 +85,62 @@ describe('MCP board tools', () => {
     expect(board.listTasks).not.toHaveBeenCalled()
   })
 
+  it('lists a month of History by year and month, by number or by name', async () => {
+    const board = store()
+    const tools = createBoardToolHandlers(board)
+    const november2025 = {
+      archived: true,
+      archivedAfter: Date.UTC(2025, 10, 1),
+      archivedBefore: Date.UTC(2025, 11, 1),
+      sort: 'archivedAt',
+    }
+
+    await tools.list_tasks({ year: 2025, month: 11 })
+    await tools.list_tasks({ year: 2025, month: 'November' })
+
+    expect(board.listTasks).toHaveBeenNthCalledWith(1, expect.objectContaining(november2025))
+    expect(board.listTasks).toHaveBeenNthCalledWith(2, expect.objectContaining(november2025))
+  })
+
+  it('lists the last 30 days of History', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(Date.UTC(2026, 10, 12))
+    const board = store()
+
+    await createBoardToolHandlers(board).list_tasks({ within: '30d' })
+    vi.useRealTimers()
+
+    expect(board.listTasks).toHaveBeenCalledWith(
+      expect.objectContaining({
+        archived: true,
+        archivedAfter: Date.UTC(2026, 10, 12) - 30 * 24 * 60 * 60 * 1000,
+        sort: 'archivedAt',
+      }),
+    )
+  })
+
+  it('lists the last two weeks of History', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(Date.UTC(2026, 10, 12))
+    const board = store()
+
+    await createBoardToolHandlers(board).list_tasks({ within: '2 weeks' })
+    vi.useRealTimers()
+
+    expect(board.listTasks).toHaveBeenCalledWith(
+      expect.objectContaining({ archivedAfter: Date.UTC(2026, 10, 12) - 14 * 24 * 60 * 60 * 1000 }),
+    )
+  })
+
+  it('refuses a month without a year', async () => {
+    const board = store()
+    const result = await createBoardToolHandlers(board).list_tasks({ month: 11 })
+
+    expect(result.isError).toBe(true)
+    expect(textOf(result)).toContain('year')
+    expect(board.listTasks).not.toHaveBeenCalled()
+  })
+
   it('returns a card with its timeline of moves and edits', async () => {
     const result = await createBoardToolHandlers(store()).get_task({ taskId: 'card-1' })
 
