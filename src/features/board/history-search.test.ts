@@ -47,6 +47,17 @@ describe('History address', () => {
     })
   })
 
+  it('keeps the start and end of a chosen year or month', () => {
+    const search = historySearchSchema.parse({ range: 'period', from: 100, to: 200 })
+
+    expect(filterFromSearch(search)).toEqual({ search: '', range: 'period', from: 100, to: 200 })
+    expect(searchFromFilter({ search: '', range: 'period', from: 100, to: 200 })).toEqual({
+      range: 'period',
+      from: 100,
+      to: 200,
+    })
+  })
+
   it('reads the page size, falling back to 20 for anything not offered', () => {
     expect(pageSizeFromSearch(historySearchSchema.parse({ size: 40 }))).toBe(40)
     expect(pageSizeFromSearch(historySearchSchema.parse({ size: 25 }))).toBe(20)

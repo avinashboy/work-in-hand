@@ -15,6 +15,13 @@ function filter(overrides: Partial<HistoryFilter>): HistoryFilter {
 }
 
 describe('resolveHistoryBounds', () => {
+  it('uses the chosen start and end for a year or month', () => {
+    expect(resolveHistoryBounds(filter({ range: 'period', from: 100, to: 200 }), NOW)).toEqual({
+      after: 100,
+      before: 200,
+    })
+  })
+
   it('has no bounds for any time', () => {
     expect(resolveHistoryBounds(NO_HISTORY_FILTER, NOW)).toEqual({ after: null, before: null })
   })

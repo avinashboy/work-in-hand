@@ -3,6 +3,7 @@ import { ARCHIVE_PAGE_SIZE, archivePageSchema, archivePageSizeSchema, type Archi
 import {
   HISTORY_RANGES,
   MAX_HISTORY_SEARCH_LENGTH,
+  hasOwnBounds,
   historyTimeSchema,
   type HistoryFilter,
 } from './history-filter'
@@ -30,7 +31,7 @@ export type HistorySearch = z.infer<typeof historySearchSchema>
 
 export function filterFromSearch(search: HistorySearch): HistoryFilter {
   const range = search.range ?? 'all'
-  const isCustom = range === 'custom'
+  const isCustom = hasOwnBounds(range)
   return {
     search: search.q?.trim() ?? '',
     range,
@@ -46,7 +47,7 @@ export function pageSizeFromSearch(search: HistorySearch): ArchivePageSize {
 /** The address for a filter, leaving out anything at its default. Starts on page 1. */
 export function searchFromFilter(filter: HistoryFilter): Omit<HistorySearch, 'page' | 'size'> {
   const search = filter.search.trim()
-  const isCustom = filter.range === 'custom'
+  const isCustom = hasOwnBounds(filter.range)
   return {
     ...(search ? { q: search } : {}),
     ...(filter.range === 'all' ? {} : { range: filter.range }),

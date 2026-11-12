@@ -6,7 +6,7 @@ import { archivePageSchema, archivePageSizeSchema } from './board-model'
  * Shared by the page, the server function and the database query.
  */
 
-export const HISTORY_RANGES = ['all', '7d', '30d', '3m', '6m', '12m', 'custom'] as const
+export const HISTORY_RANGES = ['all', '7d', '30d', '3m', '6m', '12m', 'period', 'custom'] as const
 export type HistoryRange = (typeof HISTORY_RANGES)[number]
 
 export const HISTORY_RANGE_LABELS: Readonly<Record<HistoryRange, string>> = {
@@ -16,6 +16,7 @@ export const HISTORY_RANGE_LABELS: Readonly<Record<HistoryRange, string>> = {
   '3m': 'Last 3 months',
   '6m': 'Last 6 months',
   '12m': 'Last 12 months',
+  period: 'Year or month',
   custom: 'Custom range',
 }
 
@@ -25,9 +26,14 @@ export interface HistoryFilter {
   /** Words to find in card titles. Empty means any title. */
   readonly search: string
   readonly range: HistoryRange
-  /** Custom range only: start and end, in milliseconds, both included. */
+  /** Year or month, and custom range only: start and end, in milliseconds, both included. */
   readonly from: number | null
   readonly to: number | null
+}
+
+/** Ranges that carry their own start and end instead of counting back from now. */
+export function hasOwnBounds(range: HistoryRange): boolean {
+  return range === 'custom' || range === 'period'
 }
 
 export const NO_HISTORY_FILTER: HistoryFilter = { search: '', range: 'all', from: null, to: null }
@@ -56,7 +62,7 @@ const DAYS_BACK: Partial<Record<HistoryRange, number>> = { '7d': 7, '30d': 30 }
 const MONTHS_BACK: Partial<Record<HistoryRange, number>> = { '3m': 3, '6m': 6, '12m': 12 }
 
 /** Same day of the month, or the month's last day if it's shorter: 31 May → 28 Feb. */
-function monthsBefore(now: number, months: number): number {
+export function monthsBefore(now: number, months: number): number {
   const date = new Date(now)
   const day = date.getUTCDate()
   date.setUTCDate(1)
@@ -78,7 +84,7 @@ export function resolveHistoryBounds(filter: HistoryFilter, now: number): Histor
   const months = MONTHS_BACK[filter.range]
   if (months !== undefined) return { after: monthsBefore(now, months), before: null }
 
-  if (filter.range !== 'custom') return { after: null, before: null }
+  if (!hasOwnBounds(filter.range)) return { after: null, before: null }
 
   const { from, to } = filter
   if (from !== null && to !== null && from > to) return { after: to, before: from }

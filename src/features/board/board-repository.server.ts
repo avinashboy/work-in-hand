@@ -13,6 +13,7 @@ import {
   type ArchiveActor,
   type ArchivePage,
   type ArchivePageSize,
+  type YearSpan,
   type Board,
   type BoardCommand,
   type ColumnId,
@@ -93,6 +94,7 @@ const archivedRowSchema = z.object({
 })
 
 const countRowSchema = z.object({ total: z.number() })
+const yearSpanRowSchema = z.object({ first: z.number(), last: z.number() })
 
 export interface BoardRepository extends TaskOperations {
   readonly get: () => Board
@@ -313,6 +315,19 @@ function archiveWhere(filter: HistoryFilter, now: number): { sql: string; params
   }
 }
 
+/** One row per UTC year with cards in History. Few rows, whatever History's size. */
+function readYearSpans(db: SqlDatabase): readonly YearSpan[] {
+  return db
+    .query(
+      `SELECT MIN(archived_at) AS first, MAX(archived_at) AS last
+       FROM tasks
+       WHERE archived_at IS NOT NULL
+       GROUP BY strftime('%Y', archived_at / 1000, 'unixepoch')
+       ORDER BY last DESC`,
+    )
+    .map((row) => yearSpanRowSchema.parse(row))
+}
+
 function readArchivePage(
   db: SqlDatabase,
   requestedPage: number,
@@ -356,7 +371,7 @@ function readArchivePage(
     edits: edits.get(row.id) ?? [],
   }))
 
-  return { tasks, page, pageSize, pageCount, total }
+  return { tasks, page, pageSize, pageCount, total, yearSpans: readYearSpans(db) }
 }
 
 /** All board storage. Creates any missing tables, so call it once at start-up. */

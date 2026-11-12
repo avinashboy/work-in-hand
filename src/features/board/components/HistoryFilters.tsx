@@ -9,11 +9,25 @@ import {
   type HistoryRange,
 } from '../history-filter'
 import { fromLocalInputValue, toLocalInputValue } from '../history-search'
+import type { YearSpan } from '../board-model'
+import {
+  historyYears,
+  periodBounds,
+  periodFromBounds,
+  yearsWithCards,
+  type HistoryPeriod,
+} from '../history-period'
+import { localYear, monthName, utcYear } from '../history-years'
 import { useHasHydrated } from '../use-has-hydrated'
+import { useTitleSearch, type ApplyFilter } from './use-title-search'
+
+export { TYPING_PAUSE_MS } from './use-title-search'
 
 interface HistoryFiltersProps {
   readonly filter: HistoryFilter
-  readonly onApply: (filter: HistoryFilter) => void
+  /** Which years have cards in History; see YearSpan. */
+  readonly yearSpans?: readonly YearSpan[]
+  readonly onApply: ApplyFilter
 }
 
 function isRange(value: string): value is HistoryRange {
@@ -27,16 +41,86 @@ function endOfMinute(time: number | null): number | null {
   return time === null ? null : time + REST_OF_MINUTE_MS
 }
 
-function readForm(form: HTMLFormElement, range: HistoryRange): HistoryFilter {
-  const data = new FormData(form)
-  const text = (name: string) => String(data.get(name) ?? '')
-  const isCustom = range === 'custom'
+const WHOLE_YEAR = 'all'
+const MONTHS = Array.from({ length: 12 }, (_, month) => month)
+
+/** The Year and Month boxes, or the whole newest year when they aren't on the page yet. */
+function readPeriod(data: FormData, newestYear: number): HistoryPeriod {
+  const year = Number(data.get('year'))
+  const month = data.get('month')
   return {
-    search: text('q').trim(),
-    range,
-    from: isCustom ? fromLocalInputValue(text('from')) : null,
-    to: isCustom ? endOfMinute(fromLocalInputValue(text('to'))) : null,
+    year: Number.isInteger(year) && year > 0 ? year : newestYear,
+    month: month === null || month === WHOLE_YEAR ? null : Number(month),
   }
+}
+
+function readBounds(
+  data: FormData,
+  range: HistoryRange,
+  newestYear: number,
+): Pick<HistoryFilter, 'from' | 'to'> {
+  if (range === 'period') return periodBounds(readPeriod(data, newestYear))
+  if (range !== 'custom') return { from: null, to: null }
+  const text = (name: string) => String(data.get(name) ?? '')
+  return {
+    from: fromLocalInputValue(text('from')),
+    to: endOfMinute(fromLocalInputValue(text('to'))),
+  }
+}
+
+function readForm(form: HTMLFormElement, range: HistoryRange, newestYear: number): HistoryFilter {
+  const data = new FormData(form)
+  return {
+    search: String(data.get('q') ?? '').trim(),
+    range,
+    ...readBounds(data, range, newestYear),
+  }
+}
+
+interface PeriodPickerProps {
+  readonly filter: HistoryFilter
+  readonly cardYears: readonly number[]
+  readonly newestYear: number
+  readonly onPick: (form: HTMLFormElement | null) => void
+}
+
+/** A year with cards, and optionally one month of it. Each change applies at once. */
+function PeriodPicker({ filter, cardYears, newestYear, onPick }: PeriodPickerProps) {
+  const hasHydrated = useHasHydrated()
+  const period = periodFromBounds(filter.from, filter.to)
+  const year = period?.year ?? newestYear
+  const month = period?.month ?? null
+
+  // Like the custom boxes, these are remounted once the viewer's time zone is known.
+  return (
+    <div className="history-custom-range" key={hasHydrated ? 'local' : 'server'}>
+      <label className="history-field">
+        <span>Year</span>
+        <select name="year" defaultValue={year} onChange={(event) => onPick(event.currentTarget.form)}>
+          {historyYears(cardYears, newestYear, year).map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="history-field">
+        <span>Month</span>
+        <select
+          name="month"
+          defaultValue={month ?? WHOLE_YEAR}
+          onChange={(event) => onPick(event.currentTarget.form)}
+        >
+          <option value={WHOLE_YEAR}>Whole year</option>
+          {MONTHS.map((option) => (
+            <option key={option} value={option}>
+              {monthName(option)}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  )
 }
 
 function CustomRange({ filter }: { readonly filter: HistoryFilter }) {
@@ -59,19 +143,37 @@ function CustomRange({ filter }: { readonly filter: HistoryFilter }) {
   )
 }
 
-/** Title words and a date range for History. Presets apply at once; words and custom dates on Search. */
-export function HistoryFilters({ filter, onApply }: HistoryFiltersProps) {
+/**
+ * Title words and a date range for History. Words search by themselves as
+ * you type; presets and Year or month apply at once; custom dates on Search.
+ */
+export function HistoryFilters({ filter, yearSpans = [], onApply }: HistoryFiltersProps) {
   const [range, setRange] = useState<HistoryRange>(filter.range)
+  const title = useTitleSearch(filter, onApply)
+  // Years follow the viewer's time zone, like History's year headings.
+  const cardYears = yearsWithCards(yearSpans, useHasHydrated() ? localYear : utcYear)
+  const newestYear = cardYears[0] ?? new Date().getFullYear()
+
+  const applyForm = (form: HTMLFormElement, nextRange: HistoryRange) => {
+    const next = readForm(form, nextRange, newestYear)
+    title.settle(next.search)
+    onApply(next)
+  }
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    onApply(readForm(event.currentTarget, range))
+    applyForm(event.currentTarget, range)
   }
 
   const pickRange = (value: string, form: HTMLFormElement | null) => {
     if (!isRange(value)) return
     setRange(value)
-    if (value !== 'custom' && form) onApply(readForm(form, value))
+    if (value !== 'custom' && form) applyForm(form, value)
+  }
+
+  const clear = () => {
+    title.clear()
+    onApply(NO_HISTORY_FILTER)
   }
 
   return (
@@ -81,7 +183,8 @@ export function HistoryFilters({ filter, onApply }: HistoryFiltersProps) {
         <input
           type="search"
           name="q"
-          defaultValue={filter.search}
+          value={title.text}
+          onChange={(event) => title.type(event.currentTarget.value)}
           maxLength={MAX_HISTORY_SEARCH_LENGTH}
           placeholder="Words in the title"
         />
@@ -101,12 +204,20 @@ export function HistoryFilters({ filter, onApply }: HistoryFiltersProps) {
         </select>
       </label>
       {range === 'custom' ? <CustomRange filter={filter} /> : null}
+      {range === 'period' ? (
+        <PeriodPicker
+          filter={filter}
+          cardYears={cardYears}
+          newestYear={newestYear}
+          onPick={(form) => form && applyForm(form, 'period')}
+        />
+      ) : null}
       <div className="history-filter-actions">
         <button type="submit" className="history-search-button">
           Search
         </button>
         {isHistoryFiltered(filter) ? (
-          <button type="button" className="history-clear" onClick={() => onApply(NO_HISTORY_FILTER)}>
+          <button type="button" className="history-clear" onClick={clear}>
             Clear
           </button>
         ) : null}

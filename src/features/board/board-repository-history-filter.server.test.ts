@@ -113,6 +113,39 @@ describe('History search and dates', () => {
   })
 })
 
+describe('years that have cards', () => {
+  let db: TestDatabase
+  let repository: ReturnType<typeof createBoardRepository>
+
+  beforeEach(() => {
+    db = openTestDatabase()
+    repository = createBoardRepository({ db, now: () => NOW, seedBoard: createSeedBoard(NOW) })
+  })
+
+  it('gives the first and last card time of each year, newest year first', () => {
+    insertMockHistory(db, NOW)
+    const times = MOCK_HISTORY.map((card) => mockArchivedAt(card, NOW))
+    const inYear = (year: number) => times.filter((time) => new Date(time).getUTCFullYear() === year)
+    const years = [...new Set(times.map((time) => new Date(time).getUTCFullYear()))].sort((a, b) => b - a)
+
+    expect(repository.listArchive(1).yearSpans).toEqual(
+      years.map((year) => ({ first: Math.min(...inYear(year)), last: Math.max(...inYear(year)) })),
+    )
+  })
+
+  it('counts every card, whatever the search', () => {
+    insertMockHistory(db, NOW)
+
+    expect(repository.listArchive(1, filter({ search: 'no card has this title' })).yearSpans).toEqual(
+      repository.listArchive(1).yearSpans,
+    )
+  })
+
+  it('has no years before anything reaches History', () => {
+    expect(repository.listArchive(1).yearSpans).toEqual([])
+  })
+})
+
 describe('mock History cards', () => {
   it('adds 55 cards once, with their timelines and who moved them', () => {
     const db = openTestDatabase()

@@ -10,6 +10,7 @@ import { searchFromFilter } from '../history-search'
 import { ARCHIVE_PAGE_SIZE, ARCHIVE_PAGE_SIZES, type ArchivePageSize } from '../board-model'
 import { pageAfterResize } from '../history-pager'
 import { HistoryFilters } from './HistoryFilters'
+import type { ApplyFilter } from './use-title-search'
 import { HistoryPager } from './HistoryPager'
 import { HistoryYears } from './HistoryYears'
 import { ThemeSwitch } from './ThemeSwitch'
@@ -29,8 +30,11 @@ export function HistoryView({ page, pageSize, filter }: HistoryViewProps) {
   const { data } = useSuspenseQuery(archiveQueryOptions(page, filter, pageSize))
   const navigate = useNavigate({ from: '/history' })
   const isFiltered = isHistoryFiltered(filter)
-  const applyFilter = (next: HistoryFilter) => {
-    void navigate({ search: { ...searchFromFilter(next), ...sizeInAddress(pageSize) } })
+  const applyFilter: ApplyFilter = (next, options) => {
+    void navigate({
+      search: { ...searchFromFilter(next), ...sizeInAddress(pageSize) },
+      replace: options?.replace,
+    })
   }
   // Keeps the search and lands on the page that still starts with the same card.
   const changePageSize = (next: ArchivePageSize) => {
@@ -67,8 +71,16 @@ export function HistoryView({ page, pageSize, filter }: HistoryViewProps) {
         </div>
       </header>
 
-      {/* Keyed on the address, so Clear and Back reset the boxes too. */}
-      <HistoryFilters key={JSON.stringify(filter)} filter={filter} onApply={applyFilter} />
+      {/*
+        Keyed on the dates, so Clear and Back reset the date boxes. Not on the
+        words: the Title box searches as you type and must keep its focus.
+      */}
+      <HistoryFilters
+        key={JSON.stringify([filter.range, filter.from, filter.to])}
+        filter={filter}
+        yearSpans={data.yearSpans}
+        onApply={applyFilter}
+      />
 
       {deletion.isError ? (
         <p className="history-error" role="alert">

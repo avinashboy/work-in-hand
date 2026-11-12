@@ -165,12 +165,24 @@ export interface ArchivedTask {
   readonly edits: readonly TaskEdit[]
 }
 
+/**
+ * The first and last time a card reached History within one UTC year. These
+ * two ends are enough for the browser to tell which years, in its own time
+ * zone, have any cards: only the earliest or latest card can cross New Year.
+ */
+export interface YearSpan {
+  readonly first: number
+  readonly last: number
+}
+
 export interface ArchivePage {
   readonly tasks: readonly ArchivedTask[]
   readonly page: number
   readonly pageSize: ArchivePageSize
   readonly pageCount: number
   readonly total: number
+  /** Every card in History, whatever the search, newest year first. */
+  readonly yearSpans: readonly YearSpan[]
 }
 
 export const COLUMN_TITLES: Readonly<Record<ColumnId, string>> = {
