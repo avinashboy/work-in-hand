@@ -24,6 +24,7 @@ import {
 } from '../board-queries'
 import { countTasks, resolveDropTarget } from '../board-reducer'
 import { boardCollisionDetection, useBoardDrag } from '../use-board-drag'
+import { AppVersion } from './AppVersion'
 import { BoardColumn } from './BoardColumn'
 import { TaskFace } from './TaskCard'
 import { ThemeSwitch } from './ThemeSwitch'
@@ -161,6 +162,8 @@ export function BoardView() {
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      <AppVersion />
 
       <div className="notice-region" role="status">
         {notice ? (

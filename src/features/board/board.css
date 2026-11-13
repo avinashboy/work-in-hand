@@ -673,6 +673,23 @@ body {
 
 /* Failed-save notice */
 
+/*
+ * The build's version, stamped small in the corner like a printer's mark.
+ * It takes its own line under the columns, so it never covers a card or button.
+ */
+.app-version {
+  flex: none;
+  align-self: flex-end;
+  margin: 0.4rem 0 0;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--rule);
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+}
+
 .notice-region {
   position: fixed;
   right: 1rem;

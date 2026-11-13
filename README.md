@@ -148,3 +148,4 @@ The next build clears `dist`, so repeat step 2 after rebuilding.
 - [API reference](docs/API.md): for connecting other apps
 - [Connecting AI agents](docs/MCP.md): MCP setup for Claude, Cursor, VS Code and others
 - [Code guide](docs/ARCHITECTURE.md): how the code is organised and how to change it
+- [Versions](version.md): every version and what changed in it. Each change adds an entry and bumps `version` in `package.json`; the board shows that number in its bottom-right corner
