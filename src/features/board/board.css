@@ -817,7 +817,7 @@ body {
 
 .task-archive:focus-visible,
 .history-delete:focus-visible,
-.history-confirm button:focus-visible,
+.confirm-dialog-actions button:focus-visible,
 .not-found-home:focus-visible,
 .theme-option:focus-visible,
 .history-link:focus-visible,
@@ -926,43 +926,128 @@ body {
   color: var(--vermilion);
 }
 
-/* Floats over the row, so the columns don't jump when it appears. */
-.history-confirm {
-  position: absolute;
-  top: 50%;
-  right: 0;
-  z-index: 2;
-  display: flex;
-  gap: 0.4rem;
-  padding-left: 0.75rem;
-  background: var(--paper);
-  transform: translateY(-50%);
+.history-delete:disabled {
+  cursor: progress;
+  opacity: 0.45;
 }
 
-.history-confirm button {
-  padding: 0.35rem 0.7rem;
+/* Asks before a card leaves History for good. Same stock as the card editor. */
+.confirm-dialog {
+  width: min(28rem, calc(100vw - 2rem));
+  box-sizing: border-box;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  overflow: visible;
+  /* It lives inside a table cell, so undo what the cell passes down (nowrap). */
+  white-space: normal;
+  text-align: left;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.confirm-dialog::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+
+.confirm-dialog-panel {
+  padding: 1.25rem 1.25rem 1.1rem;
+  border-top: 6px solid var(--vermilion);
+  background-color: var(--paper-deep);
+  background-image: var(--grain);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.55;
+  box-shadow: var(--shadow-lifted);
+}
+
+.confirm-dialog[open] .confirm-dialog-panel {
+  animation: confirm-dialog-rise 220ms var(--ease-settle);
+}
+
+.confirm-dialog[open]::backdrop {
+  animation: confirm-dialog-fade 220ms ease-out;
+}
+
+@keyframes confirm-dialog-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+
+@keyframes confirm-dialog-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.confirm-dialog-kicker {
+  margin: 0 0 0.35rem;
+  color: var(--vermilion);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.confirm-dialog h2 {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.confirm-dialog-message {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.confirm-dialog-title {
+  color: var(--ink);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--rule);
+}
+
+.confirm-dialog-actions button {
+  padding: 0.6rem 0.9rem;
   border: 1px solid var(--ink);
   background: none;
   color: var(--ink);
   font: inherit;
   cursor: pointer;
-  transition: background-color var(--duration-fast), color var(--duration-fast);
+  transition: background-color var(--duration-fast), color var(--duration-fast),
+    border-color var(--duration-fast);
 }
 
-.history-confirm .history-confirm-delete {
-  border-color: var(--vermilion);
-  background: var(--vermilion);
-  color: var(--card);
-}
-
-.history-confirm-keep:hover {
+.confirm-dialog-keep:hover {
   background: var(--ink);
   color: var(--paper);
 }
 
-.history-confirm button:disabled {
-  cursor: progress;
-  opacity: 0.6;
+.confirm-dialog-actions .confirm-dialog-delete {
+  border-color: var(--vermilion);
+  background: var(--vermilion);
+  color: var(--card);
+  font-weight: 500;
+}
+
+.confirm-dialog-actions .confirm-dialog-delete:hover {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
 }
 
 /* A card's journey: one ruled line, stamped in each column's spot colour. */
@@ -1431,13 +1516,6 @@ a.history-pager-step:hover {
     margin-top: 0.3rem;
   }
 
-  .history-confirm {
-    position: static;
-    padding-left: 0;
-    background: none;
-    transform: none;
-  }
-
   .history-row[data-open='true'] {
     border-bottom-color: transparent;
   }
@@ -1623,7 +1701,9 @@ a.history-pager-step:hover {
   }
 
   .notice,
-  .timeline {
+  .timeline,
+  .confirm-dialog[open] .confirm-dialog-panel,
+  .confirm-dialog[open]::backdrop {
     animation: none;
   }
 

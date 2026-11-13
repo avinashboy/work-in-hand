@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { ArchivedTask } from '../board-model'
 import { HistoryRow } from './HistoryRow'
@@ -35,6 +35,18 @@ function renderRow(row: ArchivedTask = task) {
 
 const deleteButton = () =>
   screen.getByRole('button', { name: 'Delete Ship the report from history' })
+const dialogButton = (name: string) => screen.getByRole('button', { name, hidden: true })
+const isDialogOpen = () => screen.getByRole('dialog', { hidden: true }).hasAttribute('open')
+
+beforeAll(() => {
+  // jsdom doesn't implement these parts of <dialog>.
+  HTMLDialogElement.prototype.showModal = function showModal() {
+    this.setAttribute('open', '')
+  }
+  HTMLDialogElement.prototype.close = function close() {
+    this.removeAttribute('open')
+  }
+})
 
 afterEach(() => {
   cleanup()
@@ -53,33 +65,79 @@ describe('HistoryRow: notes', () => {
 })
 
 describe('HistoryRow: deleting', () => {
-  it('does not delete on the first click', () => {
+  it('keeps the confirmation modal closed at first', () => {
+    renderRow()
+
+    expect(isDialogOpen()).toBe(false)
+  })
+
+  it('opens a confirmation modal instead of deleting on the first click', () => {
     renderRow()
 
     fireEvent.click(deleteButton())
 
     expect(onDelete).not.toHaveBeenCalled()
-    expect(screen.getByRole('button', { name: 'Delete forever' })).toBeTruthy()
+    expect(isDialogOpen()).toBe(true)
   })
 
-  it('deletes once it is confirmed', () => {
+  it('names the card in the modal', () => {
     renderRow()
 
     fireEvent.click(deleteButton())
-    fireEvent.click(screen.getByRole('button', { name: 'Delete forever' }))
+
+    const dialog = screen.getByRole('dialog', { hidden: true })
+    expect(dialog.getAttribute('aria-labelledby')).toBeTruthy()
+    expect(dialog.textContent).toContain('Ship the report')
+  })
+
+  it('deletes once it is confirmed, and closes the modal', () => {
+    renderRow()
+
+    fireEvent.click(deleteButton())
+    fireEvent.click(dialogButton('Delete forever'))
 
     expect(onDelete).toHaveBeenCalledTimes(1)
     expect(onDelete).toHaveBeenCalledWith('t1')
+    expect(isDialogOpen()).toBe(false)
   })
 
   it('keeps the card when asked to', () => {
     renderRow()
 
     fireEvent.click(deleteButton())
-    fireEvent.click(screen.getByRole('button', { name: 'Keep' }))
+    fireEvent.click(dialogButton('Keep'))
 
     expect(onDelete).not.toHaveBeenCalled()
-    expect(screen.queryByRole('button', { name: 'Delete forever' })).toBeNull()
+    expect(isDialogOpen()).toBe(false)
+  })
+
+  it('keeps the card when Escape closes the modal', () => {
+    renderRow()
+
+    fireEvent.click(deleteButton())
+    fireEvent(screen.getByRole('dialog', { hidden: true }), new Event('cancel', { cancelable: true }))
+
+    expect(onDelete).not.toHaveBeenCalled()
+    expect(isDialogOpen()).toBe(false)
+  })
+
+  it('keeps the card when the backdrop is clicked', () => {
+    renderRow()
+
+    fireEvent.click(deleteButton())
+    fireEvent.click(screen.getByRole('dialog', { hidden: true }))
+
+    expect(onDelete).not.toHaveBeenCalled()
+    expect(isDialogOpen()).toBe(false)
+  })
+
+  it('stays open for a click inside the panel', () => {
+    renderRow()
+
+    fireEvent.click(deleteButton())
+    fireEvent.click(screen.getByText('Delete this card for good?'))
+
+    expect(isDialogOpen()).toBe(true)
   })
 
   it('puts the keyboard on the safe choice first', () => {
@@ -87,14 +145,14 @@ describe('HistoryRow: deleting', () => {
 
     fireEvent.click(deleteButton())
 
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Keep' }))
+    expect(document.activeElement).toBe(dialogButton('Keep'))
   })
 
   it('returns the keyboard to the delete button after keeping', () => {
     renderRow()
 
     fireEvent.click(deleteButton())
-    fireEvent.click(screen.getByRole('button', { name: 'Keep' }))
+    fireEvent.click(dialogButton('Keep'))
 
     expect(document.activeElement).toBe(deleteButton())
   })
@@ -103,36 +161,25 @@ describe('HistoryRow: deleting', () => {
     renderRow()
 
     fireEvent.click(deleteButton())
-    fireEvent.click(screen.getByRole('button', { name: 'Keep' }))
+    fireEvent.click(dialogButton('Keep'))
+    fireEvent.click(deleteButton())
+    fireEvent.click(dialogButton('Delete forever'))
 
     expect(screen.queryByText('Started in backlog')).toBeNull()
   })
 
-  it('cannot be pressed twice while deleting', () => {
-    renderRowConfirmingWhileDeleting()
+  it('cannot be pressed again while deleting', () => {
+    render(
+      <table>
+        <tbody>
+          <HistoryRow task={task} isDeleting onDelete={onDelete} />
+        </tbody>
+      </table>,
+    )
 
-    const button = screen.getByRole('button', { name: 'Deleting…' })
-    expect(button.hasAttribute('disabled')).toBe(true)
+    expect(deleteButton().hasAttribute('disabled')).toBe(true)
   })
 })
-
-function renderRowConfirmingWhileDeleting() {
-  const { rerender } = render(
-    <table>
-      <tbody>
-        <HistoryRow task={task} isDeleting={false} onDelete={onDelete} />
-      </tbody>
-    </table>,
-  )
-  fireEvent.click(deleteButton())
-  rerender(
-    <table>
-      <tbody>
-        <HistoryRow task={task} isDeleting onDelete={onDelete} />
-      </tbody>
-    </table>,
-  )
-}
 
 describe('HistoryRow', () => {
   it('keeps the timeline closed at first', () => {
