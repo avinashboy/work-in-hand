@@ -14,6 +14,13 @@ How the number goes up (`MAJOR.MINOR.PATCH`):
 Versions before 0.15.0 were added later, from the git history. The hash shows the
 commit each one matches.
 
+## 0.16.0 (2026-11-17)
+
+- Every move and edit in a card's timeline says who made it: "in UI" for the board,
+  the agent's name (such as "Claude Desktop") for MCP, or "Through the API".
+- Dates are shorter everywhere, such as "17-Nov-26, 07:44 AM".
+- Moves and edits from before this version show no one, since it wasn't recorded.
+
 ## 0.15.0 (2026-11-13)
 
 - The board shows its version number in the bottom-right corner.

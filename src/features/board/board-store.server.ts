@@ -134,8 +134,8 @@ export class BoardStore extends DurableObject<Cloudflare.Env> {
     return this.snapshot(board)
   }
 
-  createTask(input: NewTask): Task | null {
-    return this.repository.createTask(input)
+  createTask(input: NewTask, actor: ArchiveActor): Task | null {
+    return this.repository.createTask(input, actor)
   }
 
   listArchive(
@@ -171,8 +171,8 @@ export class BoardStore extends DurableObject<Cloudflare.Env> {
     return this.repository.summarizeTasks()
   }
 
-  updateTask(taskId: string, patch: TaskPatch): TaskChange {
-    return this.repository.updateTask(taskId, patch)
+  updateTask(taskId: string, patch: TaskPatch, actor: ArchiveActor): TaskChange {
+    return this.repository.updateTask(taskId, patch, actor)
   }
 
   removeTask(taskId: string): boolean {
@@ -191,11 +191,12 @@ export function getBoardStore() {
 export function getTaskApiStore() {
   const store = getBoardStore()
   return {
-    createTask: (input: NewTask) => store.createTask(input),
+    createTask: (input: NewTask, actor: ArchiveActor) => store.createTask(input, actor),
     listTasks: (query: TaskQuery) => store.listTasks(query),
     findTask: (taskId: string) => store.findTask(taskId),
     summarizeTasks: () => store.summarizeTasks(),
-    updateTask: (taskId: string, patch: TaskPatch) => store.updateTask(taskId, patch),
+    updateTask: (taskId: string, patch: TaskPatch, actor: ArchiveActor) =>
+      store.updateTask(taskId, patch, actor),
     removeTask: (taskId: string) => store.removeTask(taskId),
     archiveTask: (taskId: string, actor: ArchiveActor) => store.archiveTask(taskId, actor),
   }

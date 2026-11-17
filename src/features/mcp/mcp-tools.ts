@@ -1,5 +1,5 @@
 import type { z } from 'zod'
-import { taskIdSchema } from '../board/board-model'
+import { taskIdSchema, type ArchiveActor } from '../board/board-model'
 import type { TaskChange } from '../board/board-task-queries.server'
 import { CHANGE_REFUSALS, NO_SUCH_CARD, toApiTask, toApiTaskDetail } from '../api/task-api-format'
 import type { TaskApiStore } from '../api/task-api-routes.server'
@@ -85,8 +85,9 @@ function toListQuery({ columns, archived, ...rest }: ListTasksInput) {
   })
 }
 
-/** `agentName` is the connected agent, such as "Claude Desktop", recorded when it moves a card to History. */
+/** `agentName` is the connected agent, such as "Claude Desktop", recorded on every change it makes. */
 export function createBoardToolHandlers(store: TaskApiStore, agentName: string | null = null): BoardToolHandlers {
+  const actor: ArchiveActor = { kind: 'agent', client: agentName }
   return {
     list_tasks: guarded('list_tasks', async (input) => {
       const query = check(listTasksQuerySchema, toListQuery(input))
@@ -107,7 +108,7 @@ export function createBoardToolHandlers(store: TaskApiStore, agentName: string |
       if ('problem' in body) return refuse(body.problem)
 
       const columnId = body.data.column ?? 'backlog'
-      const task = await store.createTask({ title: body.data.title, notes: body.data.notes, columnId })
+      const task = await store.createTask({ title: body.data.title, notes: body.data.notes, columnId }, actor)
       if (!task) return refuse('The board is full')
       return ok(toApiTask({ ...task, columnId, archivedAt: null, archiveReason: null, archivedBy: null }))
     }),
@@ -117,11 +118,11 @@ export function createBoardToolHandlers(store: TaskApiStore, agentName: string |
       if (!id.success) return refuse(NO_SUCH_CARD)
       const patch = check(updateTaskRequestSchema, withoutUndefined(fields))
       if ('problem' in patch) return refuse(patch.problem)
-      return respondToChange(await store.updateTask(id.data, patch.data))
+      return respondToChange(await store.updateTask(id.data, patch.data, actor))
     }),
 
     archive_task: withTaskId('archive_task', async (taskId) =>
-      respondToChange(await store.archiveTask(taskId, { kind: 'agent', client: agentName })),
+      respondToChange(await store.archiveTask(taskId, actor)),
     ),
 
     delete_task: withTaskId('delete_task', async (taskId) =>

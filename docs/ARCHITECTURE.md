@@ -75,8 +75,8 @@ The server always replaces the time on a command with its own clock.
 |---|---|
 | `tasks` | Title, column, position, times, and archive state. History is rows with `archived_at` set |
 | `task_notes` | One row per card that has notes. Kept apart so older databases needed no change to `tasks` |
-| `task_moves` | Every column a card landed in, for its timeline |
-| `task_edits` | Every title and notes change, with the column and time |
+| `task_moves` | Every column a card landed in, and who moved it (`by_kind`, `by_client`), for its timeline |
+| `task_edits` | Every title and notes change, with the column, time, and who made it |
 | `task_archive_actors` | Who moved a card to History: the board, the API, or an agent and its name. No row means it moved after 24 hours, or before this was recorded |
 | `login_attempts` | Failed-login counts per client, and one overall row keyed `*` |
 

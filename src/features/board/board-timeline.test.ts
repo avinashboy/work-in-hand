@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ArchivedTask } from './board-model'
-import { buildTimeline, describeArchive } from './board-timeline'
+import { buildTimeline, describeArchive, describeChange } from './board-timeline'
 
 const CREATED = 1000
 
@@ -15,10 +15,10 @@ const task: ArchivedTask = {
   // Cards archived before this was recorded have no one on file.
   archivedBy: null,
   moves: [
-    { columnId: 'backlog', at: CREATED },
-    { columnId: 'doing', at: 2000 },
-    { columnId: 'review', at: 3000 },
-    { columnId: 'done', at: 4000 },
+    { columnId: 'backlog', at: CREATED, by: null },
+    { columnId: 'doing', at: 2000, by: null },
+    { columnId: 'review', at: 3000, by: null },
+    { columnId: 'done', at: 4000, by: null },
   ],
   edits: [],
 }
@@ -71,10 +71,10 @@ describe('buildTimeline', () => {
     const { steps } = buildTimeline({
       ...task,
       moves: [
-        { columnId: 'backlog', at: CREATED },
-        { columnId: 'review', at: 2000 },
-        { columnId: 'doing', at: 2500 },
-        { columnId: 'done', at: 4000 },
+        { columnId: 'backlog', at: CREATED, by: null },
+        { columnId: 'review', at: 2000, by: null },
+        { columnId: 'doing', at: 2500, by: null },
+        { columnId: 'done', at: 4000, by: null },
       ],
     })
 
@@ -94,7 +94,7 @@ describe('buildTimeline', () => {
   it('admits when earlier moves were not recorded', () => {
     const timeline = buildTimeline({
       ...task,
-      moves: [{ columnId: 'done', at: 4000 }],
+      moves: [{ columnId: 'done', at: 4000, by: null }],
     })
 
     expect(timeline.isPartial).toBe(true)
@@ -109,8 +109,8 @@ describe('buildTimeline', () => {
     const { steps } = buildTimeline({
       ...task,
       edits: [
-        { kind: 'title', columnId: 'review', at: 3500 },
-        { kind: 'notes-added', columnId: 'done', at: 4500 },
+        { kind: 'title', columnId: 'review', at: 3500, by: null },
+        { kind: 'notes-added', columnId: 'done', at: 4500, by: null },
       ],
     })
 
@@ -128,7 +128,7 @@ describe('buildTimeline', () => {
   it('gives an edit the tone of the column it was made in', () => {
     const { steps } = buildTimeline({
       ...task,
-      edits: [{ kind: 'notes-changed', columnId: 'doing', at: 2500 }],
+      edits: [{ kind: 'notes-changed', columnId: 'doing', at: 2500, by: null }],
     })
 
     expect(steps.find(({ at }) => at === 2500)?.tone).toBe('doing')
@@ -138,9 +138,9 @@ describe('buildTimeline', () => {
     const { steps } = buildTimeline({
       ...task,
       edits: [
-        { kind: 'notes-added', columnId: 'backlog', at: 1100 },
-        { kind: 'notes-changed', columnId: 'backlog', at: 1200 },
-        { kind: 'notes-removed', columnId: 'backlog', at: 1300 },
+        { kind: 'notes-added', columnId: 'backlog', at: 1100, by: null },
+        { kind: 'notes-changed', columnId: 'backlog', at: 1200, by: null },
+        { kind: 'notes-removed', columnId: 'backlog', at: 1300, by: null },
       ],
     })
 
@@ -154,7 +154,7 @@ describe('buildTimeline', () => {
   it('keeps a move before an edit made at the same moment', () => {
     const { steps } = buildTimeline({
       ...task,
-      edits: [{ kind: 'title', columnId: 'doing', at: 2000 }],
+      edits: [{ kind: 'title', columnId: 'doing', at: 2000, by: null }],
     })
 
     expect(steps.slice(1, 3).map(({ label }) => label)).toEqual([
@@ -168,5 +168,34 @@ describe('buildTimeline', () => {
 
     expect(timeline.isPartial).toBe(true)
     expect(timeline.steps.map(({ at }) => at)).toEqual([1000, 5000])
+  })
+
+  it('says after each move and edit who made it: the UI, an agent by name, or the API', () => {
+    const board = { kind: 'board', client: null } as const
+    const agent = { kind: 'agent', client: 'Claude Desktop' } as const
+    const { steps } = buildTimeline({
+      ...task,
+      moves: [
+        { columnId: 'backlog', at: CREATED, by: board },
+        { columnId: 'doing', at: 2000, by: agent },
+        { columnId: 'done', at: 4000, by: { kind: 'api', client: null } },
+      ],
+      edits: [{ kind: 'title', columnId: 'doing', at: 2500, by: board }],
+    })
+
+    expect(steps.map(({ label, detail }) => [label, detail])).toEqual([
+      ['Started in backlog', 'in UI'],
+      ['Moved to in progress', 'Claude Desktop'],
+      ['In progress: title changed', 'in UI'],
+      ['Done', 'Through the API'],
+      ['Moved to history', 'Archive pressed'],
+    ])
+  })
+
+  it('names no one for changes made before this was recorded', () => {
+    expect(describeChange(null)).toBeNull()
+    expect(describeChange({ kind: 'agent', client: null })).toBe('AI agent')
+    expect(describeChange({ kind: 'api', client: 'Home Assistant' })).toBe('Through the API: Home Assistant')
+    expect(buildTimeline(task).steps.slice(0, -1).every(({ detail }) => detail === null)).toBe(true)
   })
 })

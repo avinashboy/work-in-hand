@@ -41,10 +41,16 @@ describe('formatRelativeTime', () => {
 })
 
 describe('formatTimestamp', () => {
-  it('shows the date and time in the requested zone', () => {
-    const text = formatTimestamp(Date.UTC(2026, 10, 9, 14, 5), 'UTC')
+  it('shows a short date and a 12-hour time in the requested zone', () => {
+    expect(formatTimestamp(Date.UTC(2026, 10, 9, 14, 5), 'UTC')).toBe('09-Nov-26, 02:05 PM')
+  })
 
-    expect(text).toContain('9 Nov 2026')
-    expect(text).toContain('14:05')
+  it('pads the hour and says AM in the morning', () => {
+    expect(formatTimestamp(Date.UTC(2026, 10, 17, 7, 44), 'UTC')).toBe('17-Nov-26, 07:44 AM')
+  })
+
+  it('shows midnight and noon as 12', () => {
+    expect(formatTimestamp(Date.UTC(2026, 0, 1, 0, 0), 'UTC')).toBe('01-Jan-26, 12:00 AM')
+    expect(formatTimestamp(Date.UTC(2026, 0, 1, 12, 0), 'UTC')).toBe('01-Jan-26, 12:00 PM')
   })
 })

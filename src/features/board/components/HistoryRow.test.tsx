@@ -13,9 +13,9 @@ const task: ArchivedTask = {
   reason: 'expired',
   archivedBy: null,
   moves: [
-    { columnId: 'backlog', at: 1_000_000 },
-    { columnId: 'doing', at: 2_000_000 },
-    { columnId: 'done', at: 3_000_000 },
+    { columnId: 'backlog', at: 1_000_000, by: null },
+    { columnId: 'doing', at: 2_000_000, by: null },
+    { columnId: 'done', at: 3_000_000, by: null },
   ],
   edits: [],
 }
@@ -231,8 +231,8 @@ describe('HistoryRow', () => {
     const toggle = renderRow({
       ...task,
       edits: [
-        { kind: 'title', columnId: 'doing', at: 2_500_000 },
-        { kind: 'notes-added', columnId: 'done', at: 3_500_000 },
+        { kind: 'title', columnId: 'doing', at: 2_500_000, by: null },
+        { kind: 'notes-added', columnId: 'done', at: 3_500_000, by: null },
       ],
     })
 
@@ -245,7 +245,7 @@ describe('HistoryRow', () => {
   it('explains when earlier moves were not recorded', () => {
     const toggle = renderRow({
       ...task,
-      moves: [{ columnId: 'done', at: 3_000_000 }],
+      moves: [{ columnId: 'done', at: 3_000_000, by: null }],
     })
 
     fireEvent.click(toggle)

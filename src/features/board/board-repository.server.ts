@@ -28,6 +28,7 @@ import {
   recordArchiveActor,
   toArchiveActor,
 } from './board-archive-actors.server'
+import { actorRowColumns, addActorColumns, toChangeActor } from './board-change-actors.server'
 import { EDITS_SCHEMA, deleteEdits, readEdits, recordEdits } from './board-edits.server'
 import { applyCommand, countTasks } from './board-reducer'
 import { createTaskOperations, type TaskOperations } from './board-task-operations.server'
@@ -64,7 +65,8 @@ const NOTES_SCHEMA = `
   );
 `
 
-const INSERT_MOVE ='INSERT INTO task_moves (task_id, column_id, at) VALUES (?, ?, ?)'
+const INSERT_MOVE =
+  'INSERT INTO task_moves (task_id, column_id, at, by_kind, by_client) VALUES (?, ?, ?, ?, ?)'
 
 const activeRowSchema = z.object({
   id: z.string(),
@@ -80,6 +82,7 @@ const moveRowSchema = z.object({
   task_id: z.string(),
   column_id: z.enum(COLUMN_IDS),
   at: z.number(),
+  ...actorRowColumns,
 })
 
 const archivedRowSchema = z.object({
@@ -98,13 +101,13 @@ const yearSpanRowSchema = z.object({ first: z.number(), last: z.number() })
 
 export interface BoardRepository extends TaskOperations {
   readonly get: () => Board
-  /** `actor` is recorded when the command moves a card to History; the board's button by default. */
+  /** `actor` is recorded as who made the change; the board's own page by default. */
   readonly apply: (command: BoardCommand, actor?: ArchiveActor) => Board
   readonly listArchive: (page: number, filter?: HistoryFilter, pageSize?: ArchivePageSize) => ArchivePage
   /** Only ever touches finished cards: one still on the board is left alone. */
   readonly deleteArchived: (taskId: string) => void
-  /** Returns the new card, or null when the board is full. */
-  readonly createTask: (input: NewTask) => Task | null
+  /** Returns the new card, or null when the board is full. `actor` says who added it. */
+  readonly createTask: (input: NewTask, actor: ArchiveActor) => Task | null
 }
 
 export interface NewTask {
@@ -145,7 +148,7 @@ function saveTasks(db: SqlDatabase, board: Board): void {
 }
 
 /** Logs each card that is in a different column than before, or is new. */
-function recordMoves(db: SqlDatabase, previous: Board, next: Board): void {
+function recordMoves(db: SqlDatabase, previous: Board, next: Board, by: ArchiveActor): void {
   const columnBefore = new Map(
     previous.columns.flatMap(({ id, tasks }) =>
       tasks.map((task) => [task.id, id] as const),
@@ -154,7 +157,7 @@ function recordMoves(db: SqlDatabase, previous: Board, next: Board): void {
   for (const { id: columnId, tasks } of next.columns) {
     tasks
       .filter((task) => columnBefore.get(task.id) !== columnId)
-      .forEach((task) => db.run(INSERT_MOVE, task.id, columnId, task.movedAt))
+      .forEach((task) => db.run(INSERT_MOVE, task.id, columnId, task.movedAt, by.kind, by.client))
   }
 }
 
@@ -198,11 +201,13 @@ function setUpSchema(db: SqlDatabase, seedBoard: Board): void {
     const isNewDatabase =
       db.query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'tasks'")
         .length === 0
+    if (isNewDatabase) db.script(SCHEMA)
+    addActorColumns(db, 'task_moves')
+    addActorColumns(db, 'task_edits')
     if (!isNewDatabase) return
 
-    db.script(SCHEMA)
     saveTasks(db, seedBoard)
-    recordMoves(db, NO_TASKS, seedBoard)
+    recordMoves(db, NO_TASKS, seedBoard, BOARD_ARCHIVE_ACTOR)
   })
 }
 
@@ -291,7 +296,7 @@ function readMoves(db: SqlDatabase, taskIds: readonly string[]) {
   const placeholders = taskIds.map(() => '?').join(', ')
   return db
     .query(
-      `SELECT task_id, column_id, at FROM task_moves
+      `SELECT task_id, column_id, at, by_kind, by_client FROM task_moves
        WHERE task_id IN (${placeholders}) ORDER BY at, id`,
       ...taskIds,
     )
@@ -367,7 +372,7 @@ function readArchivePage(
     archivedBy: toArchiveActor(row),
     moves: moves
       .filter((move) => move.task_id === row.id)
-      .map(({ column_id: columnId, at }) => ({ columnId, at })),
+      .map((move) => ({ columnId: move.column_id, at: move.at, by: toChangeActor(move) })),
     edits: edits.get(row.id) ?? [],
   }))
 
@@ -401,8 +406,8 @@ export function createBoardRepository({
     saveChangedNotes(db, previous, next)
     // Compared with what was really saved: an archived id can't be revived.
     const saved = loadBoard(db)
-    recordMoves(db, previous, saved)
-    recordEdits(db, previous, saved, time)
+    recordMoves(db, previous, saved, actor)
+    recordEdits(db, previous, saved, time, actor)
     return saved
   }
 
@@ -428,10 +433,10 @@ export function createBoardRepository({
     }),
     get,
     apply,
-    createTask: ({ columnId, title, notes }) => {
+    createTask: ({ columnId, title, notes }, actor) => {
       if (countTasks(get()) >= MAX_TASKS_ON_BOARD) return null
       const taskId = createTaskId()
-      const board = apply({ type: 'create', taskId, columnId, title, notes, at: now() })
+      const board = apply({ type: 'create', taskId, columnId, title, notes, at: now() }, actor)
       return (
         board.columns.flatMap(({ tasks }) => tasks).find(({ id }) => id === taskId) ?? null
       )

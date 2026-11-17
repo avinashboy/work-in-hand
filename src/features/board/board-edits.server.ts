@@ -1,8 +1,10 @@
 import { z } from 'zod'
 import type { SqlDatabase } from '../../lib/sql-database'
+import { actorRowColumns, toChangeActor } from './board-change-actors.server'
 import {
   COLUMN_IDS,
   TASK_EDIT_KINDS,
+  type ArchiveActor,
   type Board,
   type ColumnId,
   type Task,
@@ -22,13 +24,15 @@ export const EDITS_SCHEMA = `
   CREATE INDEX IF NOT EXISTS task_edits_by_task ON task_edits (task_id, at);
 `
 
-const INSERT_EDIT = 'INSERT INTO task_edits (task_id, kind, column_id, at) VALUES (?, ?, ?, ?)'
+const INSERT_EDIT =
+  'INSERT INTO task_edits (task_id, kind, column_id, at, by_kind, by_client) VALUES (?, ?, ?, ?, ?, ?)'
 
 const editRowSchema = z.object({
   task_id: z.string(),
   kind: z.enum(TASK_EDIT_KINDS),
   column_id: z.enum(COLUMN_IDS),
   at: z.number(),
+  ...actorRowColumns,
 })
 
 interface Placed {
@@ -58,12 +62,20 @@ function editKinds(before: Task, after: Task): readonly TaskEditKind[] {
  * Logs each title or notes change on a card that existed before and after.
  * New cards are skipped: their title and notes are part of being created.
  */
-export function recordEdits(db: SqlDatabase, previous: Board, next: Board, at: number): void {
+export function recordEdits(
+  db: SqlDatabase,
+  previous: Board,
+  next: Board,
+  at: number,
+  by: ArchiveActor,
+): void {
   const before = new Map(placedTasks(previous).map(({ task }) => [task.id, task] as const))
   for (const { task, columnId } of placedTasks(next)) {
     const old = before.get(task.id)
     if (old === undefined) continue
-    editKinds(old, task).forEach((kind) => db.run(INSERT_EDIT, task.id, kind, columnId, at))
+    editKinds(old, task).forEach((kind) =>
+      db.run(INSERT_EDIT, task.id, kind, columnId, at, by.kind, by.client),
+    )
   }
 }
 
@@ -80,7 +92,7 @@ export function readEdits(
   const placeholders = taskIds.map(() => '?').join(', ')
   const rows = db
     .query(
-      `SELECT task_id, kind, column_id, at FROM task_edits
+      `SELECT task_id, kind, column_id, at, by_kind, by_client FROM task_edits
        WHERE task_id IN (${placeholders}) ORDER BY at, id`,
       ...taskIds,
     )
@@ -91,7 +103,7 @@ export function readEdits(
       id,
       rows
         .filter((row) => row.task_id === id)
-        .map(({ kind, column_id: columnId, at }) => ({ kind, columnId, at })),
+        .map((row) => ({ kind: row.kind, columnId: row.column_id, at: row.at, by: toChangeActor(row) })),
     ]),
   )
 }

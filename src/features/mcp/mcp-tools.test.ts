@@ -4,6 +4,8 @@ import type { TaskApiStore } from '../api/task-api-routes.server'
 import type { StoredTaskDetail, TaskListPage } from '../board/board-task-queries.server'
 import { createBoardToolHandlers } from './mcp-tools'
 
+const UNNAMED_AGENT = { kind: 'agent', client: null } as const
+
 const AT = Date.UTC(2026, 10, 10, 9, 30)
 
 const storedTask: StoredTaskDetail = {
@@ -17,8 +19,8 @@ const storedTask: StoredTaskDetail = {
   archivedAt: null,
   archiveReason: null,
   archivedBy: null,
-  moves: [{ columnId: 'backlog', at: AT }],
-  edits: [{ kind: 'title', columnId: 'review', at: AT }],
+  moves: [{ columnId: 'backlog', at: AT, by: null }],
+  edits: [{ kind: 'title', columnId: 'review', at: AT, by: null }],
 }
 
 const emptyPage: TaskListPage = { tasks: [], total: 0, page: 1, limit: 50, pageCount: 0 }
@@ -180,12 +182,12 @@ describe('MCP board tools', () => {
     await tools.create_task({ title: '  Book the venue  ' })
     await tools.create_task({ title: 'Review the plan', column: 'in review', notes: 'By Friday' })
 
-    expect(board.createTask).toHaveBeenNthCalledWith(1, { title: 'Book the venue', notes: '', columnId: 'backlog' })
+    expect(board.createTask).toHaveBeenNthCalledWith(1, { title: 'Book the venue', notes: '', columnId: 'backlog' }, UNNAMED_AGENT)
     expect(board.createTask).toHaveBeenNthCalledWith(2, {
       title: 'Review the plan',
       notes: 'By Friday',
       columnId: 'review',
-    })
+    }, UNNAMED_AGENT)
   })
 
   it('reports a full board when creating a card', async () => {
@@ -209,7 +211,7 @@ describe('MCP board tools', () => {
     const board = store()
     await createBoardToolHandlers(board).update_task({ taskId: 'card-1', column: 'Done', position: 0 })
 
-    expect(board.updateTask).toHaveBeenCalledWith('card-1', { columnId: 'done', position: 0 })
+    expect(board.updateTask).toHaveBeenCalledWith('card-1', { columnId: 'done', position: 0 }, UNNAMED_AGENT)
   })
 
   it('refuses an update with nothing to change', async () => {

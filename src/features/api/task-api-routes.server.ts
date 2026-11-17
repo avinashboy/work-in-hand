@@ -30,11 +30,12 @@ export interface NewApiTask {
 }
 
 export interface TaskApiStore {
-  readonly createTask: (input: NewApiTask) => Promise<Task | null>
+  /** `actor` says who made the change, for the card's timeline. */
+  readonly createTask: (input: NewApiTask, actor: ArchiveActor) => Promise<Task | null>
   readonly listTasks: (query: TaskQuery) => Promise<TaskListPage>
   readonly findTask: (taskId: string) => Promise<StoredTaskDetail | null>
   readonly summarizeTasks: () => Promise<TaskSummary>
-  readonly updateTask: (taskId: string, patch: TaskPatch) => Promise<TaskChange>
+  readonly updateTask: (taskId: string, patch: TaskPatch, actor: ArchiveActor) => Promise<TaskChange>
   readonly removeTask: (taskId: string) => Promise<boolean>
   /** `actor` says who moved it to History, for its timeline. */
   readonly archiveTask: (taskId: string, actor: ArchiveActor) => Promise<TaskChange>
@@ -83,7 +84,7 @@ function tasksRoutes(store: TaskApiStore): Routes {
       if (body instanceof Response) return body
 
       const columnId = body.column ?? 'backlog'
-      const task = await store.createTask({ title: body.title, notes: body.notes, columnId })
+      const task = await store.createTask({ title: body.title, notes: body.notes, columnId }, API_ARCHIVE_ACTOR)
       if (!task) return fail(409, 'The board is full')
 
       return succeed(toApiTask({ ...task, columnId, archivedAt: null, archiveReason: null, archivedBy: null }), 201)
@@ -100,7 +101,7 @@ function taskRoutes(store: TaskApiStore, taskId: string): Routes {
     PATCH: async (request) => {
       const patch = await readBody(request, updateTaskRequestSchema)
       if (patch instanceof Response) return patch
-      return respondToChange(await store.updateTask(taskId, patch))
+      return respondToChange(await store.updateTask(taskId, patch, API_ARCHIVE_ACTOR))
     },
     DELETE: async () =>
       (await store.removeTask(taskId))

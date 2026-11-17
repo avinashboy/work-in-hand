@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { StoredTaskDetail, TaskChange } from '../board/board-task-queries.server'
 import { handleTaskApi, isTaskApiRequest, type TaskApiOptions } from './task-api.server'
 
+const API_ACTOR = { kind: 'api', client: null } as const
+
 const BASE = 'https://board.test'
 const API_KEY = 'test-only-api-key-0123456789abcdefghij'
 const AT = Date.UTC(2026, 10, 9, 12, 0, 0)
@@ -19,8 +21,8 @@ const stored: StoredTaskDetail = {
   archivedAt: null,
   archiveReason: null,
   archivedBy: null,
-  moves: [{ columnId: 'doing', at: AT }],
-  edits: [{ kind: 'notes-added', columnId: 'doing', at: AT }],
+  moves: [{ columnId: 'doing', at: AT, by: null }],
+  edits: [{ kind: 'notes-added', columnId: 'doing', at: AT, by: null }],
 }
 
 const apiTask = {
@@ -423,7 +425,7 @@ describe('PATCH /api/tasks/:id', () => {
       notes: 'More',
       columnId: 'done',
       position: 0,
-    })
+    }, API_ACTOR)
     expect(body.data).toEqual(detail)
   })
 
@@ -432,7 +434,7 @@ describe('PATCH /api/tasks/:id', () => {
 
     await send(call('PATCH', '/api/tasks/abc123', { notes: '' }), api)
 
-    expect(api.updateTask).toHaveBeenCalledWith('abc123', { notes: '' })
+    expect(api.updateTask).toHaveBeenCalledWith('abc123', { notes: '' }, API_ACTOR)
   })
 
   it.each([

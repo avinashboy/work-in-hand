@@ -27,6 +27,14 @@ export function describeArchive({ reason, archivedBy }: Pick<ArchivedTask, 'reas
   return archivedBy.client === null || archivedBy.kind === 'board' ? label : `${label}: ${archivedBy.client}`
 }
 
+/** Who made a move or an edit. Null when it was made before this was recorded. */
+export function describeChange(by: ArchiveActor | null): string | null {
+  if (by === null) return null
+  if (by.kind === 'board') return 'in UI'
+  if (by.kind === 'agent') return by.client ?? 'AI agent'
+  return by.client === null ? 'Through the API' : `Through the API: ${by.client}`
+}
+
 const EDIT_LABELS: Readonly<Record<TaskEditKind, string>> = {
   title: 'title changed',
   'notes-added': 'notes added',
@@ -51,10 +59,10 @@ function columnName(columnId: ColumnId): string {
   return COLUMN_TITLES[columnId].toLowerCase()
 }
 
-function editStep({ kind, columnId, at }: TaskEdit): TimelineStep {
+function editStep({ kind, columnId, at, by }: TaskEdit): TimelineStep {
   return {
     label: `${COLUMN_TITLES[columnId]}: ${EDIT_LABELS[kind]}`,
-    detail: null,
+    detail: describeChange(by),
     at,
     tone: columnId,
   }
@@ -72,14 +80,14 @@ export function buildTimeline(task: ArchivedTask): TaskTimeline {
 
   const started: TimelineStep = {
     label: startMove ? `Started in ${columnName(startMove.columnId)}` : 'Started',
-    detail: null,
+    detail: describeChange(startMove?.by ?? null),
     at: task.createdAt,
     tone: startMove?.columnId ?? 'backlog',
   }
   const landings = laterMoves.map(
-    ({ columnId, at }): TimelineStep => ({
+    ({ columnId, at, by }): TimelineStep => ({
       label: columnId === DONE_COLUMN_ID ? 'Done' : `Moved to ${columnName(columnId)}`,
-      detail: null,
+      detail: describeChange(by),
       at,
       tone: columnId,
     }),

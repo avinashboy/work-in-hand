@@ -4,6 +4,8 @@ import { openTestDatabase, type TestDatabase } from '../../lib/node-sql-database
 import { COLUMN_IDS, COLUMN_TITLES, type Board, type ColumnId } from './board-model'
 import { createBoardRepository } from './board-repository.server'
 
+const BOARD_ACTOR = { kind: 'board', client: null } as const
+
 const START = Date.UTC(2026, 0, 1)
 
 const emptyBoard: Board = {
@@ -52,7 +54,7 @@ describe('title and notes edits in the database', () => {
 
     rename('t1', 'Renamed')
 
-    expect(archive('t1')?.edits).toEqual([{ kind: 'title', columnId: 'review', at: START + 5000 }])
+    expect(archive('t1')?.edits).toEqual([{ kind: 'title', columnId: 'review', at: START + 5000, by: BOARD_ACTOR }])
   })
 
   it('tells added, changed and removed notes apart', () => {
@@ -100,7 +102,7 @@ describe('title and notes edits in the database', () => {
     setNotes('t1', 'Details')
 
     expect(repository.findTask('t1')?.edits).toEqual([
-      { kind: 'notes-added', columnId: 'backlog', at: START },
+      { kind: 'notes-added', columnId: 'backlog', at: START, by: BOARD_ACTOR },
     ])
   })
 

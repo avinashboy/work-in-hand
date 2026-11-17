@@ -93,7 +93,7 @@ export type ColumnId = z.infer<typeof columnIdSchema>
 export type BoardCommand = z.infer<typeof boardCommandSchema>
 export type ArchiveReason = 'confirmed' | 'expired'
 
-/** Who moved a card to History: the board's button, an app on the REST API, or an AI agent over MCP. */
+/** Who changed a card: the board's own page, an app on the REST API, or an AI agent over MCP. */
 export const ARCHIVE_ACTOR_KINDS = ['board', 'api', 'agent'] as const
 export type ArchiveActorKind = (typeof ARCHIVE_ACTOR_KINDS)[number]
 
@@ -118,6 +118,8 @@ export interface Task {
 export interface TaskMove {
   readonly columnId: ColumnId
   readonly at: number
+  /** Who moved it: the board, an app on the API, or a named agent. Null for moves made before this was recorded. */
+  readonly by: ArchiveActor | null
 }
 
 export const TASK_EDIT_KINDS = ['title', 'notes-added', 'notes-changed', 'notes-removed'] as const
@@ -128,6 +130,8 @@ export interface TaskEdit {
   readonly kind: TaskEditKind
   readonly columnId: ColumnId
   readonly at: number
+  /** Who made the change. Null for edits made before this was recorded. */
+  readonly by: ArchiveActor | null
 }
 
 export interface Column {

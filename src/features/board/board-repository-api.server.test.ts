@@ -242,54 +242,63 @@ describe('board repository for the API', () => {
     })
 
     it('changes the title and notes together', () => {
-      const task = changedTask(repository.updateTask('a', { title: 'New', notes: 'More' }))
+      const task = changedTask(repository.updateTask('a', { title: 'New', notes: 'More' }, API))
 
       expect(task).toMatchObject({ title: 'New', notes: 'More', columnId: 'backlog' })
       expect(repository.findTask('a')).toMatchObject({ title: 'New', notes: 'More' })
     })
 
     it('clears notes', () => {
-      repository.updateTask('a', { notes: 'Temporary' })
+      repository.updateTask('a', { notes: 'Temporary' }, API)
 
-      expect(changedTask(repository.updateTask('a', { notes: '' })).notes).toBe('')
+      expect(changedTask(repository.updateTask('a', { notes: '' }, API)).notes).toBe('')
     })
 
     it('moves a card to the end of another column and logs it', () => {
       add('c', 'review')
 
-      const task = changedTask(repository.updateTask('a', { columnId: 'review' }))
+      const task = changedTask(repository.updateTask('a', { columnId: 'review' }, API))
 
       expect(task.columnId).toBe('review')
       expect(task.moves.map(({ columnId }) => columnId)).toEqual(['backlog', 'review'])
       expect(ids2('review')).toEqual(['c', 'a'])
     })
 
+    it('records who moved or edited the card, for its timeline', () => {
+      const agent = { kind: 'agent', client: 'Claude Desktop' } as const
+      repository.updateTask('a', { title: 'Renamed' }, agent)
+      const task = changedTask(repository.updateTask('a', { columnId: 'doing' }, API))
+
+      expect(task.moves.at(-1)?.by).toEqual(API)
+      expect(task.edits).toEqual([expect.objectContaining({ kind: 'title', by: agent })])
+    })
+
     it('marks a card done and un-done', () => {
-      expect(changedTask(repository.updateTask('a', { columnId: 'done' })).doneAt).toBe(time)
-      expect(changedTask(repository.updateTask('a', { columnId: 'doing' })).doneAt).toBeNull()
+      expect(changedTask(repository.updateTask('a', { columnId: 'done' }, API)).doneAt).toBe(time)
+      expect(changedTask(repository.updateTask('a', { columnId: 'doing' }, API)).doneAt).toBeNull()
     })
 
     it('reorders within a column without logging a move', () => {
-      const task = changedTask(repository.updateTask('b', { position: 0 }))
+      const task = changedTask(repository.updateTask('b', { position: 0 }, API))
 
       expect(ids2('backlog')).toEqual(['b', 'a'])
       expect(task.moves).toHaveLength(1)
     })
 
     it('leaves the order alone when the column is unchanged', () => {
-      repository.updateTask('a', { columnId: 'backlog' })
+      repository.updateTask('a', { columnId: 'backlog' }, API)
 
       expect(ids2('backlog')).toEqual(['a', 'b'])
     })
 
     it('reports an unknown card', () => {
-      expect(repository.updateTask('nope', { title: 'x' })).toEqual({ outcome: 'missing' })
+      expect(repository.updateTask('nope', { title: 'x' }, API)).toEqual({ outcome: 'missing' })
     })
 
     it('refuses to change a card in the history', () => {
       archive('a')
 
-      expect(repository.updateTask('a', { title: 'Too late' })).toEqual({ outcome: 'history' })
+      expect(repository.updateTask('a', { title: 'Too late' }, API)).toEqual({ outcome: 'history' })
       expect(repository.findTask('a')?.title).toBe('Card a')
     })
 

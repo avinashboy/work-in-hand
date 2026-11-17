@@ -9,6 +9,8 @@ import {
   type TaskApiOptions,
 } from './task-api.server'
 
+const API_ACTOR = { kind: 'api', client: null } as const
+
 const URL_ = 'https://board.test/api/tasks'
 const API_KEY = 'test-only-api-key-0123456789abcdefghij'
 const CREATED_AT = Date.UTC(2026, 10, 9, 12, 0, 0)
@@ -152,7 +154,7 @@ describe('handleTaskApi: creating cards', () => {
       title: 'Call the bank',
       columnId: 'doing',
       notes: 'Ask about the fee',
-    })
+    }, API_ACTOR)
     expect(body).toEqual({
       success: true,
       data: {
@@ -182,7 +184,7 @@ describe('handleTaskApi: creating cards', () => {
       title: 'Just a thought',
       columnId: 'backlog',
       notes: '',
-    })
+    }, API_ACTOR)
   })
 
   it.each([
@@ -203,7 +205,7 @@ describe('handleTaskApi: creating cards', () => {
 
     await send(post({ title: 'x', column }), api)
 
-    expect(api.createTask).toHaveBeenCalledWith(expect.objectContaining({ columnId }))
+    expect(api.createTask).toHaveBeenCalledWith(expect.objectContaining({ columnId }), API_ACTOR)
   })
 
   it.each(['done', 'Done', 'nowhere', '', 'constructor'])('refuses the column "%s"', async (column) => {
@@ -222,8 +224,7 @@ describe('handleTaskApi: creating cards', () => {
     await send(post({ title: '  Spaced  ', notes: '  Note  ' }), api)
 
     expect(api.createTask).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Spaced', notes: 'Note' }),
-    )
+      expect.objectContaining({ title: 'Spaced', notes: 'Note' }), API_ACTOR)
   })
 
   it.each([

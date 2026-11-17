@@ -30,7 +30,8 @@ export interface TaskOperations {
   readonly listTasks: (query: TaskQuery) => TaskListPage
   readonly findTask: (taskId: string) => StoredTaskDetail | null
   readonly summarizeTasks: () => TaskSummary
-  readonly updateTask: (taskId: string, patch: TaskPatch) => TaskChange
+  /** `actor` says who made the change, for the card's timeline. */
+  readonly updateTask: (taskId: string, patch: TaskPatch, actor: ArchiveActor) => TaskChange
   /** Works on the board and the history. False when there is no such card. */
   readonly removeTask: (taskId: string) => boolean
   /** `actor` says who moved it to History, for its timeline. */
@@ -107,9 +108,9 @@ export function createTaskOperations({
     listTasks: (query) => swept(() => listTasks(db, query)),
     findTask: (taskId) => swept(() => findTask(db, taskId)),
     summarizeTasks: () => swept(() => summarizeTasks(db)),
-    updateTask: (taskId, patch) =>
+    updateTask: (taskId, patch, actor) =>
       changeActive(taskId, (task) => {
-        commandsFor(task, patch, now()).forEach((command) => applyChange(command))
+        commandsFor(task, patch, now()).forEach((command) => applyChange(command, actor))
         return changed(taskId)
       }),
     removeTask: (taskId) =>

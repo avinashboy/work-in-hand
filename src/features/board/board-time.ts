@@ -24,14 +24,19 @@ export function formatRelativeTime(value: number, now: number): string {
   return relativeFormat.format(-Math.trunc(elapsed / size), unit)
 }
 
-/** Leave timeZone out to use the viewer's own locale and time zone. */
+type TimestampPart = 'day' | 'month' | 'year' | 'hour' | 'minute' | 'dayPeriod'
+
+/** Short and the same everywhere, such as "17-Nov-26, 07:44 AM". Leave timeZone out for the viewer's own. */
 export function formatTimestamp(value: number, timeZone?: string): string {
-  return new Intl.DateTimeFormat(timeZone ? 'en-GB' : undefined, {
-    day: 'numeric',
+  const parts = new Intl.DateTimeFormat('en-US', {
+    day: '2-digit',
     month: 'short',
-    year: 'numeric',
+    year: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    hourCycle: 'h12',
     timeZone,
-  }).format(value)
+  }).formatToParts(value)
+  const part = (type: TimestampPart) => parts.find((entry) => entry.type === type)?.value ?? ''
+  return `${part('day')}-${part('month')}-${part('year')}, ${part('hour')}:${part('minute')} ${part('dayPeriod').toUpperCase()}`
 }

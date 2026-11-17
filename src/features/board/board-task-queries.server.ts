@@ -15,6 +15,7 @@ import {
   archiveActorColumns,
   toArchiveActor,
 } from './board-archive-actors.server'
+import { actorRowColumns, toChangeActor } from './board-change-actors.server'
 import { readEdits } from './board-edits.server'
 
 export const TASK_SORTS = ['createdAt', 'movedAt', 'doneAt', 'archivedAt', 'title'] as const
@@ -105,7 +106,7 @@ const taskRowSchema = z.object({
   ...archiveActorColumns,
 })
 
-const moveRowSchema = z.object({ column_id: z.enum(COLUMN_IDS), at: z.number() })
+const moveRowSchema = z.object({ column_id: z.enum(COLUMN_IDS), at: z.number(), ...actorRowColumns })
 const countRowSchema = z.object({ total: z.number() })
 const columnCountRowSchema = z.object({ column_id: z.enum(COLUMN_IDS), count: z.number() })
 const totalsRowSchema = z.object({
@@ -218,9 +219,9 @@ export function findTask(db: SqlDatabase, taskId: string): StoredTaskDetail | nu
   if (row === undefined) return null
 
   const moves = db
-    .query('SELECT column_id, at FROM task_moves WHERE task_id = ? ORDER BY at, id', taskId)
+    .query('SELECT column_id, at, by_kind, by_client FROM task_moves WHERE task_id = ? ORDER BY at, id', taskId)
     .map((move) => moveRowSchema.parse(move))
-    .map(({ column_id: columnId, at }) => ({ columnId, at }))
+    .map((move) => ({ columnId: move.column_id, at: move.at, by: toChangeActor(move) }))
 
   const edits = readEdits(db, [taskId]).get(taskId) ?? []
 

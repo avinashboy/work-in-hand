@@ -184,27 +184,28 @@ describe('card notes in the database', () => {
   })
 
   describe('createTask', () => {
+    const AGENT = { kind: 'agent', client: 'Cursor' } as const
     const input = { columnId: 'doing', title: 'From voice', notes: 'Details' } as const
 
     it('creates a card and returns it', () => {
-      const task = repository.createTask(input)
+      const task = repository.createTask(input, AGENT)
 
       expect(task).toMatchObject({ title: 'From voice', notes: 'Details', createdAt: START })
       expect(repository.get().columns[1].tasks.map(({ id }) => id)).toEqual([task?.id])
     })
 
     it('logs the column it landed in for the timeline', () => {
-      const task = repository.createTask(input)
+      const task = repository.createTask(input, AGENT)
 
-      expect(db.query('SELECT column_id FROM task_moves WHERE task_id = ?', task?.id ?? '')).toEqual([
-        { column_id: 'doing' },
-      ])
+      expect(
+        db.query('SELECT column_id, by_kind, by_client FROM task_moves WHERE task_id = ?', task?.id ?? ''),
+      ).toEqual([{ column_id: 'doing', by_kind: 'agent', by_client: 'Cursor' }])
     })
 
     it('returns null when the board is full', () => {
       Array.from({ length: MAX_TASKS_ON_BOARD }).forEach((_, index) => addCard(`c${index}`))
 
-      expect(repository.createTask(input)).toBeNull()
+      expect(repository.createTask(input, AGENT)).toBeNull()
     })
   })
 })

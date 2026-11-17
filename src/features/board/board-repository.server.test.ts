@@ -16,6 +16,8 @@ import {
   type ColumnId,
 } from './board-model'
 
+const BOARD_ACTOR = { kind: 'board', client: null } as const
+
 const START = Date.UTC(2026, 0, 1)
 const CLIENT_CLOCK = 123
 
@@ -146,8 +148,8 @@ describe('createBoardRepository', () => {
       fileCard('t1')
 
       expect(repository.listArchive(1).tasks[0].moves).toEqual([
-        { columnId: 'backlog', at: START + 1000 },
-        { columnId: 'done', at: START + 1000 },
+        { columnId: 'backlog', at: START + 1000, by: BOARD_ACTOR },
+        { columnId: 'done', at: START + 1000, by: BOARD_ACTOR },
       ])
     })
 
@@ -295,10 +297,10 @@ describe('createBoardRepository', () => {
       clock += 1000
 
       expect(file('t1')).toEqual([
-        { columnId: 'backlog', at: START },
-        { columnId: 'doing', at: START + 1000 },
-        { columnId: 'review', at: START + 2000 },
-        { columnId: 'done', at: START + 3000 },
+        { columnId: 'backlog', at: START, by: BOARD_ACTOR },
+        { columnId: 'doing', at: START + 1000, by: BOARD_ACTOR },
+        { columnId: 'review', at: START + 2000, by: BOARD_ACTOR },
+        { columnId: 'done', at: START + 3000, by: BOARD_ACTOR },
       ])
     })
 
@@ -330,7 +332,7 @@ describe('createBoardRepository', () => {
       repository.apply(move('t1', 'doing'))
 
       expect(file('t1').filter(({ columnId }) => columnId === 'doing')).toEqual([
-        { columnId: 'doing', at: START + 1000 },
+        { columnId: 'doing', at: START + 1000, by: BOARD_ACTOR },
       ])
     })
 
@@ -366,8 +368,8 @@ describe('createBoardRepository', () => {
       repository.apply(create('t1'))
 
       expect(file('t1')).toEqual([
-        { columnId: 'backlog', at: START + 1000 },
-        { columnId: 'done', at: START + 1000 },
+        { columnId: 'backlog', at: START + 1000, by: BOARD_ACTOR },
+        { columnId: 'done', at: START + 1000, by: BOARD_ACTOR },
       ])
     })
   })
@@ -462,6 +464,7 @@ describe('database file', () => {
     expect(repository.listArchive(1).tasks[0].moves[0]).toEqual({
       columnId: 'backlog',
       at: START,
+      by: BOARD_ACTOR,
     })
     repository.close()
   })
