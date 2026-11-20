@@ -26,73 +26,73 @@ commit each one matches.
 - The board shows its version number in the bottom-right corner.
 - This file (`version.md`) starts keeping a record of every version.
 
-## 0.14.0 (2026-11-13) `d31c2f6`
+## 0.14.0 (2026-11-13)
 
 - Deleting a card from History asks first, in a pop-up that matches the light and dark themes.
 
-## 0.13.0 (2026-11-12) `cb84d63`
+## 0.13.0 (2026-11-12)
 
 - The API and MCP can list History by year, month or recent days.
 
-## 0.12.0 (2026-11-12) `f8f84f0`
+## 0.12.0 (2026-11-12)
 
 - History can be searched by year or month, with results updating as you type.
 
-## 0.11.0 (2026-11-10) `1b19962`
+## 0.11.0 (2026-11-10)
 
 - History has month headings inside each year.
 
-## 0.10.1 (2026-11-10) `9d976d2`
+## 0.10.1 (2026-11-10)
 
 - Fix: every tab icon link now switches with the theme.
 
-## 0.10.0 (2026-11-10) `7001b81`
+## 0.10.0 (2026-11-10)
 
 - History shows "AI agent: <name>" instead of "By an AI agent".
 
-## 0.9.0 (2026-11-10) `3ef98a2`
+## 0.9.0 (2026-11-10)
 
 - History gets search, pages and year groups.
 - Each card records who moved it to History.
 
-## 0.8.0 (2026-11-10) `31c4dc4`
+## 0.8.0 (2026-11-10)
 
 - MCP server, so AI agents can connect to the board.
 
-## 0.7.0 (2026-11-10) `29f2577`
+## 0.7.0 (2026-11-10)
 
 - Browser fingerprinting in the public demo.
 
-## 0.6.0 (2026-11-10) `787cf69`
+## 0.6.0 (2026-11-10)
 
 - Title and notes edits are saved with their column and time, and show in the timeline.
 
-## 0.5.1 (2026-11-09) `92734fd`
+## 0.5.1 (2026-11-09)
 
 - Fix: the board stays within the screen and each column scrolls.
 
-## 0.5.0 (2026-11-09) `f79e363`
+## 0.5.0 (2026-11-09)
 
 - Public demo.
 - Light and dark themes.
 - Screenshots and more documentation.
 
-## 0.4.0 (2026-11-09) `1556900`
+## 0.4.0 (2026-11-09) 
 
 - README, API reference and code guide.
 - Removed the outage button.
 
-## 0.3.0 (2026-11-09) `4757d5d`
+## 0.3.0 (2026-11-09) 
 
 - Full task API.
 - Card titles can be edited.
 
-## 0.2.0 (2026-11-09) `ddad99f`, `9a9dbc3`
+## 0.2.0 (2026-11-09) 
 
 - Notes on cards.
 - An API call to add cards.
 - File cleanup.
 
-## 0.1.0 (2026-11-09) `278c593`
+## 0.1.0 (2026-11-09) 
 
 - First version: the board with a password login.
